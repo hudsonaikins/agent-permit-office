@@ -19,7 +19,10 @@ from agent_permit.evals import (
     EVAL_REPORT_FILE,
     EVAL_RESULTS_FILE,
     PHOENIX_DATASET_ROWS_FILE,
+    REAL_REPO_EVAL_REPORT_FILE,
+    REAL_REPO_EVAL_RESULTS_FILE,
     run_fixture_eval_suite,
+    run_real_repo_eval_suite,
     upload_phoenix_dataset_rows,
 )
 from agent_permit.investigation import (
@@ -147,6 +150,38 @@ def build_parser() -> argparse.ArgumentParser:
             f"{DEFAULT_PHOENIX_DATASET_NAME}"
         ),
     )
+    real_eval_parser = subparsers.add_parser(
+        "eval-real",
+        help="run deterministic evals against local real-repo checkouts",
+    )
+    real_eval_parser.add_argument(
+        "manifest",
+        type=Path,
+        help="JSON manifest with repo paths and expected scanner outcomes",
+    )
+    real_eval_parser.add_argument(
+        "--repo-root",
+        type=Path,
+        help="base directory used to resolve relative manifest local_path values",
+    )
+    real_eval_parser.add_argument(
+        "--run-id",
+        help="explicit eval run ID for deterministic tests or replay",
+    )
+    real_eval_parser.add_argument(
+        "--output",
+        type=Path,
+        help="output directory; defaults to .agent-permit/real-repo-evals/<run_id>",
+    )
+    real_eval_parser.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        help=(
+            "gitignore-style pattern to skip during inventory; repeat for "
+            "multiple patterns"
+        ),
+    )
     rules_parser = subparsers.add_parser(
         "rules",
         help="list deterministic scanner rules",
@@ -196,6 +231,16 @@ def main(
             upload_phoenix=args.upload_phoenix,
             phoenix_base_url=args.phoenix_base_url,
             phoenix_dataset_name=args.phoenix_dataset_name,
+            stdout=stdout,
+            stderr=stderr,
+        )
+    if args.command == "eval-real":
+        return run_real_eval(
+            args.manifest,
+            repo_root=args.repo_root,
+            eval_run_id=args.run_id,
+            output_dir=args.output,
+            exclude_patterns=args.exclude,
             stdout=stdout,
             stderr=stderr,
         )
@@ -462,6 +507,59 @@ def run_eval(
         )
         if phoenix_upload_result.dataset_id:
             print(f"Phoenix dataset ID: {phoenix_upload_result.dataset_id}", file=stdout)
+    return 0 if eval_run.passed else 1
+
+
+def run_real_eval(
+    manifest_path: Path,
+    *,
+    repo_root: Path | None = None,
+    eval_run_id: str | None = None,
+    output_dir: Path | None = None,
+    exclude_patterns: Sequence[str] | None = None,
+    stdout: TextIO,
+    stderr: TextIO,
+) -> int:
+    if not manifest_path.exists():
+        print(f"error: manifest does not exist: {manifest_path}", file=stderr)
+        return 2
+    if not manifest_path.is_file():
+        print(f"error: manifest must be a file: {manifest_path}", file=stderr)
+        return 2
+    if repo_root is not None and not repo_root.is_dir():
+        print(f"error: repo root must be a directory: {repo_root}", file=stderr)
+        return 2
+
+    try:
+        eval_run = run_real_repo_eval_suite(
+            manifest_path,
+            repo_root=repo_root,
+            eval_run_id=eval_run_id,
+            output_dir=output_dir,
+            exclude_patterns=tuple(exclude_patterns or ()),
+        )
+    except (OSError, ValueError, RuntimeError, KeyError, json.JSONDecodeError) as exc:
+        print(f"error: real repo eval failed: {exc}", file=stderr)
+        return 1
+
+    passed = sum(1 for result in eval_run.results if result.passed)
+    total = len(eval_run.results)
+    print("Agent Permit Office", file=stdout)
+    print("Status: real_repo_eval_complete", file=stdout)
+    print(f"Eval run: {eval_run.eval_run_id}", file=stdout)
+    print(f"Manifest: {eval_run.manifest_path}", file=stdout)
+    if eval_run.repo_root is not None:
+        print(f"Repo root: {eval_run.repo_root}", file=stdout)
+    print(f"Output: {eval_run.output_dir}", file=stdout)
+    print(f"Repos: {passed}/{total} passed", file=stdout)
+    print(
+        f"Results: {eval_run.output_dir / REAL_REPO_EVAL_RESULTS_FILE}",
+        file=stdout,
+    )
+    print(
+        f"Report: {eval_run.output_dir / REAL_REPO_EVAL_REPORT_FILE}",
+        file=stdout,
+    )
     return 0 if eval_run.passed else 1
 
 

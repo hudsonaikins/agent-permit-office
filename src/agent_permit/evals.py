@@ -21,6 +21,9 @@ EVALS_DIR = "evals"
 EVAL_RESULTS_FILE = "eval-results.json"
 EVAL_REPORT_FILE = "eval-report.md"
 PHOENIX_DATASET_ROWS_FILE = "phoenix-dataset-rows.jsonl"
+REAL_REPO_EVALS_DIR = "real-repo-evals"
+REAL_REPO_EVAL_RESULTS_FILE = "real-repo-eval-results.json"
+REAL_REPO_EVAL_REPORT_FILE = "real-repo-eval-report.md"
 DEFAULT_PHOENIX_DATASET_NAME = "agent-permit-fixture-evals"
 DEFAULT_PHOENIX_BASE_URL = "http://localhost:6006"
 
@@ -85,6 +88,57 @@ class PhoenixDatasetUploadResult:
     version_id: str | None = None
 
 
+@dataclass(frozen=True)
+class RealRepoEvalCase:
+    repo_id: str
+    repo_path: Path
+    source: str
+    expected_permit_status: str
+    expected_rule_ids_present: tuple[str, ...]
+    expected_rule_ids_absent: tuple[str, ...]
+    notes: str
+
+
+@dataclass(frozen=True)
+class RealRepoEvalResult:
+    repo_id: str
+    passed: bool
+    source: str
+    repo_path: Path
+    expected_permit_status: str
+    actual_permit_status: str
+    expected_rule_ids_present: tuple[str, ...]
+    expected_rule_ids_absent: tuple[str, ...]
+    actual_rule_ids: tuple[str, ...]
+    missing_rule_ids: tuple[str, ...]
+    forbidden_rule_ids: tuple[str, ...]
+    status_check_passed: bool
+    expected_rule_check_passed: bool
+    forbidden_rule_check_passed: bool
+    citation_check_passed: bool
+    secret_leak_check_passed: bool
+    quality_score: float
+    findings_count: int
+    artifact_dir: Path
+    investigation_report: Path
+    duration_seconds: float
+
+
+@dataclass(frozen=True)
+class RealRepoEvalRun:
+    eval_run_id: str
+    output_dir: Path
+    manifest_path: Path
+    repo_root: Path | None
+    results: tuple[RealRepoEvalResult, ...]
+    started_at: datetime
+    completed_at: datetime
+
+    @property
+    def passed(self) -> bool:
+        return all(result.passed for result in self.results)
+
+
 def create_eval_run_id(now: datetime | None = None) -> str:
     timestamp = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     return timestamp.strftime("%Y%m%dT%H%M%SZ")
@@ -104,6 +158,39 @@ def load_fixture_cases(fixture_root: Path) -> list[FixtureEvalCase]:
         )
     if not cases:
         raise ValueError(f"no fixture manifests found under {fixture_root}")
+    return cases
+
+
+def load_real_repo_cases(
+    manifest_path: Path,
+    *,
+    repo_root: Path | None = None,
+) -> list[RealRepoEvalCase]:
+    manifest_path = manifest_path.resolve()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    repos = manifest.get("repos", [])
+    if not repos:
+        raise ValueError(f"no repos found in manifest {manifest_path}")
+    cases: list[RealRepoEvalCase] = []
+    for entry in repos:
+        repo_path = Path(str(entry["local_path"]))
+        if not repo_path.is_absolute():
+            repo_path = (repo_root or manifest_path.parent) / repo_path
+        cases.append(
+            RealRepoEvalCase(
+                repo_id=str(entry["id"]),
+                repo_path=repo_path.resolve(),
+                source=str(entry.get("source", "")),
+                expected_permit_status=str(entry["expected_permit_status"]),
+                expected_rule_ids_present=tuple(
+                    sorted(entry.get("expected_rule_ids_present", []))
+                ),
+                expected_rule_ids_absent=tuple(
+                    sorted(entry.get("expected_rule_ids_absent", []))
+                ),
+                notes=str(entry.get("notes", "")),
+            )
+        )
     return cases
 
 
@@ -136,6 +223,46 @@ def run_fixture_eval_suite(
         completed_at=completed_at,
     )
     _write_eval_artifacts(eval_run)
+    return eval_run
+
+
+def run_real_repo_eval_suite(
+    manifest_path: Path,
+    *,
+    repo_root: Path | None = None,
+    eval_run_id: str | None = None,
+    output_dir: Path | None = None,
+    exclude_patterns: tuple[str, ...] = (),
+) -> RealRepoEvalRun:
+    manifest_path = manifest_path.resolve()
+    repo_root = repo_root.resolve() if repo_root is not None else None
+    eval_run_id = eval_run_id or create_eval_run_id()
+    output_dir = (
+        output_dir or (Path.cwd() / ARTIFACT_ROOT / REAL_REPO_EVALS_DIR / eval_run_id)
+    ).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    started_at = datetime.now(timezone.utc)
+
+    cases = load_real_repo_cases(manifest_path, repo_root=repo_root)
+    results = [
+        _run_real_repo_case(
+            case,
+            eval_run_id,
+            exclude_patterns=exclude_patterns,
+        )
+        for case in cases
+    ]
+    completed_at = datetime.now(timezone.utc)
+    eval_run = RealRepoEvalRun(
+        eval_run_id=eval_run_id,
+        output_dir=output_dir,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+        results=tuple(results),
+        started_at=started_at,
+        completed_at=completed_at,
+    )
+    _write_real_repo_eval_artifacts(eval_run)
     return eval_run
 
 
@@ -204,6 +331,93 @@ def _run_fixture_case(
     )
 
 
+def _run_real_repo_case(
+    case: RealRepoEvalCase,
+    eval_run_id: str,
+    *,
+    exclude_patterns: tuple[str, ...],
+) -> RealRepoEvalResult:
+    from agent_permit.cli import run_investigate, run_scan
+
+    if not case.repo_path.exists():
+        raise RuntimeError(f"repo path does not exist for {case.repo_id}: {case.repo_path}")
+    if not case.repo_path.is_dir():
+        raise RuntimeError(f"repo path must be a directory for {case.repo_id}: {case.repo_path}")
+
+    start = time.perf_counter()
+    scan_run_id = f"{eval_run_id}-{case.repo_id}"
+    with _NullWriter() as stdout, _NullWriter() as stderr:
+        scan_exit_code = run_scan(
+            case.repo_path,
+            run_id=scan_run_id,
+            ci=False,
+            exclude_patterns=exclude_patterns,
+            stdout=stdout,
+            stderr=stderr,
+        )
+        stderr_text = stderr.text
+    if scan_exit_code != 0:
+        raise RuntimeError(f"real repo scan failed for {case.repo_id}: {stderr_text}")
+
+    artifact_dir = case.repo_path / ARTIFACT_ROOT / "runs" / scan_run_id
+    with _NullWriter() as stdout, _NullWriter() as stderr:
+        investigate_exit_code = run_investigate(
+            artifact_dir,
+            stdout=stdout,
+            stderr=stderr,
+        )
+        stderr_text = stderr.text
+    if investigate_exit_code != 0:
+        raise RuntimeError(
+            f"real repo investigation failed for {case.repo_id}: {stderr_text}"
+        )
+
+    context = EvidenceContext.load(artifact_dir)
+    actual_rule_ids = tuple(sorted({finding.rule_id for finding in context.findings}))
+    expected_present = tuple(sorted(case.expected_rule_ids_present))
+    expected_absent = tuple(sorted(case.expected_rule_ids_absent))
+    missing_rule_ids = tuple(sorted(set(expected_present) - set(actual_rule_ids)))
+    forbidden_rule_ids = tuple(sorted(set(expected_absent) & set(actual_rule_ids)))
+    report_path = artifact_dir / "agent-investigation.md"
+    report_markdown = report_path.read_text(encoding="utf-8")
+    citation_result = critique_investigation_report(context, report_markdown)
+    secret_leak_check_passed = not _artifact_tree_contains_secret_marker(artifact_dir)
+    status_check_passed = case.expected_permit_status == context.permit_status
+    expected_rule_check_passed = not missing_rule_ids
+    forbidden_rule_check_passed = not forbidden_rule_ids
+    check_results = (
+        status_check_passed,
+        expected_rule_check_passed,
+        forbidden_rule_check_passed,
+        citation_result.supported,
+        secret_leak_check_passed,
+    )
+    passed = all(check_results)
+    return RealRepoEvalResult(
+        repo_id=case.repo_id,
+        passed=passed,
+        source=case.source,
+        repo_path=case.repo_path,
+        expected_permit_status=case.expected_permit_status,
+        actual_permit_status=context.permit_status,
+        expected_rule_ids_present=expected_present,
+        expected_rule_ids_absent=expected_absent,
+        actual_rule_ids=actual_rule_ids,
+        missing_rule_ids=missing_rule_ids,
+        forbidden_rule_ids=forbidden_rule_ids,
+        status_check_passed=status_check_passed,
+        expected_rule_check_passed=expected_rule_check_passed,
+        forbidden_rule_check_passed=forbidden_rule_check_passed,
+        citation_check_passed=citation_result.supported,
+        secret_leak_check_passed=secret_leak_check_passed,
+        quality_score=round(sum(check_results) / len(check_results), 4),
+        findings_count=len(context.findings),
+        artifact_dir=artifact_dir,
+        investigation_report=report_path,
+        duration_seconds=round(time.perf_counter() - start, 4),
+    )
+
+
 def _write_eval_artifacts(eval_run: FixtureEvalRun) -> None:
     (eval_run.output_dir / EVAL_RESULTS_FILE).write_text(
         json.dumps(_eval_run_payload(eval_run), indent=2, sort_keys=True) + "\n",
@@ -219,6 +433,18 @@ def _write_eval_artifacts(eval_run: FixtureEvalRun) -> None:
             for row in build_phoenix_dataset_rows(eval_run)
         )
         + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_real_repo_eval_artifacts(eval_run: RealRepoEvalRun) -> None:
+    (eval_run.output_dir / REAL_REPO_EVAL_RESULTS_FILE).write_text(
+        json.dumps(_real_repo_eval_run_payload(eval_run), indent=2, sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+    )
+    (eval_run.output_dir / REAL_REPO_EVAL_REPORT_FILE).write_text(
+        build_real_repo_eval_report_markdown(eval_run),
         encoding="utf-8",
     )
 
@@ -252,6 +478,60 @@ def build_phoenix_dataset_rows(eval_run: FixtureEvalRun) -> list[dict[str, Any]]
             }
         )
     return rows
+
+
+def build_real_repo_eval_report_markdown(eval_run: RealRepoEvalRun) -> str:
+    passed = sum(1 for result in eval_run.results if result.passed)
+    total = len(eval_run.results)
+    lines = [
+        "# Agent Permit Office Real Repo Eval Report",
+        "",
+        f"Eval run: `{eval_run.eval_run_id}`",
+        f"Status: `{'passed' if eval_run.passed else 'failed'}`",
+        f"Cases: `{passed}/{total}`",
+        f"Manifest: `{eval_run.manifest_path}`",
+        "",
+        "## Cases",
+        "",
+        "| Repo | Status | Expected Rules | Forbidden Rules | Citations | Secret Leak | Quality |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for result in eval_run.results:
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    result.repo_id,
+                    "pass" if result.passed else "fail",
+                    "pass" if result.expected_rule_check_passed else "fail",
+                    "pass" if result.forbidden_rule_check_passed else "fail",
+                    "pass" if result.citation_check_passed else "fail",
+                    "pass" if result.secret_leak_check_passed else "fail",
+                    f"{result.quality_score:.2f}",
+                ]
+            )
+            + " |"
+        )
+    lines.append("")
+    lines.append("## Failures")
+    lines.append("")
+    failures = [result for result in eval_run.results if not result.passed]
+    if not failures:
+        lines.append("No failures.")
+    for result in failures:
+        lines.extend(
+            [
+                f"### {result.repo_id}",
+                "",
+                f"- expected status: `{result.expected_permit_status}`",
+                f"- actual status: `{result.actual_permit_status}`",
+                f"- missing rules: `{', '.join(result.missing_rule_ids) or 'none'}`",
+                f"- forbidden rules found: `{', '.join(result.forbidden_rule_ids) or 'none'}`",
+                f"- artifacts: `{result.artifact_dir}`",
+                "",
+            ]
+        )
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def upload_phoenix_dataset_rows(
@@ -385,6 +665,49 @@ def _eval_run_payload(eval_run: FixtureEvalRun) -> dict[str, Any]:
                 "secret_leak_check_passed": result.secret_leak_check_passed,
                 "quality_score": result.quality_score,
                 "artifact_dir": str(result.artifact_dir),
+                "duration_seconds": result.duration_seconds,
+            }
+            for result in eval_run.results
+        ],
+    }
+
+
+def _real_repo_eval_run_payload(eval_run: RealRepoEvalRun) -> dict[str, Any]:
+    return {
+        "eval_run_id": eval_run.eval_run_id,
+        "manifest_path": str(eval_run.manifest_path),
+        "repo_root": str(eval_run.repo_root) if eval_run.repo_root is not None else None,
+        "output_dir": str(eval_run.output_dir),
+        "started_at": eval_run.started_at.isoformat(),
+        "completed_at": eval_run.completed_at.isoformat(),
+        "passed": eval_run.passed,
+        "summary": {
+            "total": len(eval_run.results),
+            "passed": sum(1 for result in eval_run.results if result.passed),
+            "failed": sum(1 for result in eval_run.results if not result.passed),
+        },
+        "results": [
+            {
+                "repo_id": result.repo_id,
+                "passed": result.passed,
+                "source": result.source,
+                "repo_path": str(result.repo_path),
+                "expected_permit_status": result.expected_permit_status,
+                "actual_permit_status": result.actual_permit_status,
+                "expected_rule_ids_present": list(result.expected_rule_ids_present),
+                "expected_rule_ids_absent": list(result.expected_rule_ids_absent),
+                "actual_rule_ids": list(result.actual_rule_ids),
+                "missing_rule_ids": list(result.missing_rule_ids),
+                "forbidden_rule_ids": list(result.forbidden_rule_ids),
+                "status_check_passed": result.status_check_passed,
+                "expected_rule_check_passed": result.expected_rule_check_passed,
+                "forbidden_rule_check_passed": result.forbidden_rule_check_passed,
+                "citation_check_passed": result.citation_check_passed,
+                "secret_leak_check_passed": result.secret_leak_check_passed,
+                "quality_score": result.quality_score,
+                "findings_count": result.findings_count,
+                "artifact_dir": str(result.artifact_dir),
+                "investigation_report": str(result.investigation_report),
                 "duration_seconds": result.duration_seconds,
             }
             for result in eval_run.results

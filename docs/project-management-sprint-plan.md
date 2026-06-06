@@ -404,6 +404,21 @@ Backlog:
 | Failure boundary | Missing server/client fails only explicit upload path. | Done: default eval remains local; upload failures return non-zero. |
 | Live validation docs | Operator can start Phoenix and validate dataset connectivity. | Done: Phoenix docs include upload command and checklist. |
 
+## Sprint 13: Real Repo Eval Set
+
+Goal:
+
+- make public repo validation repeatable without cloning during tests
+
+Backlog:
+
+| Item | Outcome | Acceptance criteria |
+| --- | --- | --- |
+| Manifest | Public repo expectations are committed separately from clones. | Done: `docs/evals/real-repos.json` defines source, local path, expected status, expected rule families, and forbidden critical rules. |
+| Runner | CLI evaluates local public checkouts. | Done: `agent-permit eval-real` scans each local repo, writes investigation reports, and produces JSON/Markdown eval output. |
+| Drift-tolerant checks | Public repo drift does not break exact-count assumptions. | Done: checks status plus present/absent rule IDs, not exact finding counts. |
+| Validation | Existing local clones are evaluated. | Done: 3/3 public repos passed in `/tmp/agent-permit-validation`. |
+
 ## Release Criteria For MVP
 
 MVP is ready when:

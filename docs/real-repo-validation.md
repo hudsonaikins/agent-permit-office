@@ -32,6 +32,15 @@ Each run was followed by:
 uv run agent-permit investigate /tmp/agent-permit-validation/<repo>/.agent-permit/runs/<run_id>
 ```
 
+Sprint 13 adds a repeatable manifest runner:
+
+```bash
+uv run agent-permit eval-real docs/evals/real-repos.json \
+  --repo-root /tmp/agent-permit-validation \
+  --run-id sprint13-real-repos \
+  --output /tmp/apo-sprint13-real-repos
+```
+
 ## Results
 
 | Repo | Permit | Findings | Graph paths | Controls | Main rules |
@@ -41,6 +50,19 @@ uv run agent-permit investigate /tmp/agent-permit-validation/<repo>/.agent-permi
 | `autogen` | `needs_review` | 32 | 9 | 41 | 20 `ci-secret-reference`, 12 `ci-write-permission` |
 
 All investigation reports passed citation checks.
+
+Sprint 13 manifest eval result:
+
+| Repo | Permit | Findings | Actual rule IDs | Quality |
+| --- | --- | ---: | --- | ---: |
+| `open_deep_research` | `needs_review` | 4 | `ci-secret-reference`, `ci-write-permission` | 1.0 |
+| `crewAI-examples` | `needs_review` | 3 | `ci-secret-reference`, `ci-write-permission` | 1.0 |
+| `autogen` | `needs_review` | 32 | `ci-secret-reference`, `ci-write-permission` | 1.0 |
+
+Output artifacts:
+
+- `/tmp/apo-sprint13-real-repos/real-repo-eval-results.json`
+- `/tmp/apo-sprint13-real-repos/real-repo-eval-report.md`
 
 ## Finding
 

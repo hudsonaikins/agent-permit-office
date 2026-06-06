@@ -57,6 +57,12 @@ Upload eval rows to a running local Phoenix server:
 uv run --extra phoenix agent-permit eval tests/fixtures --upload-phoenix
 ```
 
+Run repeatable real-repo evals against local public clones:
+
+```bash
+uv run agent-permit eval-real docs/evals/real-repos.json --repo-root /tmp/agent-permit-validation
+```
+
 List deterministic rules:
 
 ```bash

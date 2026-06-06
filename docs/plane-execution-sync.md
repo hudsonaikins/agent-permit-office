@@ -170,6 +170,10 @@ Sprint 12 Phoenix live validation items:
 
 - `APO-50`: Add Phoenix live validation and dataset upload - done
 
+Sprint 13 real repo eval items:
+
+- `APO-51`: Add real repo eval manifest and runner - done
+
 ## Operating Rule
 
 Plane is now the execution tracker.

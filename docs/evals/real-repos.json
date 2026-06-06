@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "description": "Local public-repo validation set. Clone repos separately, then run with --repo-root.",
+  "repos": [
+    {
+      "id": "open_deep_research",
+      "source": "https://github.com/langchain-ai/open_deep_research",
+      "local_path": "open_deep_research",
+      "expected_permit_status": "needs_review",
+      "expected_rule_ids_present": [
+        "ci-secret-reference",
+        "ci-write-permission"
+      ],
+      "expected_rule_ids_absent": [
+        "ci-pr-target-head-checkout",
+        "ci-pr-target-write-token",
+        "ci-pull-request-target"
+      ],
+      "notes": "Prior validation found workflow secret references and write permissions, but no pull_request_target critical rules."
+    },
+    {
+      "id": "crewAI-examples",
+      "source": "https://github.com/crewAIInc/crewAI-examples",
+      "local_path": "crewAI-examples",
+      "expected_permit_status": "needs_review",
+      "expected_rule_ids_present": [
+        "ci-secret-reference",
+        "ci-write-permission"
+      ],
+      "expected_rule_ids_absent": [
+        "ci-pr-target-head-checkout",
+        "ci-pr-target-write-token",
+        "ci-pull-request-target"
+      ],
+      "notes": "Prior validation found workflow secret references and write permissions, but no pull_request_target critical rules."
+    },
+    {
+      "id": "autogen",
+      "source": "https://github.com/microsoft/autogen",
+      "local_path": "autogen",
+      "expected_permit_status": "needs_review",
+      "expected_rule_ids_present": [
+        "ci-secret-reference",
+        "ci-write-permission"
+      ],
+      "expected_rule_ids_absent": [
+        "ci-pr-target-head-checkout",
+        "ci-pr-target-write-token",
+        "ci-pull-request-target"
+      ],
+      "notes": "Prior validation found workflow secret references and write permissions, but no pull_request_target critical rules."
+    }
+  ]
+}

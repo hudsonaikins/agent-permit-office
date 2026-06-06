@@ -8,8 +8,12 @@ from agent_permit.evals import (
     EVAL_RESULTS_FILE,
     PHOENIX_DATASET_ROWS_FILE,
     PhoenixDatasetUploadResult,
+    REAL_REPO_EVAL_REPORT_FILE,
+    REAL_REPO_EVAL_RESULTS_FILE,
     build_phoenix_dataset_rows,
+    load_real_repo_cases,
     run_fixture_eval_suite,
+    run_real_repo_eval_suite,
     upload_phoenix_dataset_rows,
 )
 
@@ -273,3 +277,142 @@ def test_eval_cli_rejects_empty_fixture_root(tmp_path) -> None:
     assert exit_code == 1
     assert stdout.getvalue() == ""
     assert "no fixture manifests found" in stderr.getvalue()
+
+
+def test_real_repo_eval_suite_scans_manifest_repos(tmp_path) -> None:
+    repo_root = tmp_path / "repos"
+    repo_root.mkdir()
+    _write_real_repo_fixture(repo_root / "agent-repo")
+    manifest_path = _write_real_repo_manifest(tmp_path, local_path="agent-repo")
+
+    eval_run = run_real_repo_eval_suite(
+        manifest_path,
+        repo_root=repo_root,
+        eval_run_id="real-eval",
+        output_dir=tmp_path / "real-output",
+    )
+    payload = json.loads(
+        (eval_run.output_dir / REAL_REPO_EVAL_RESULTS_FILE).read_text()
+    )
+
+    assert eval_run.passed is True
+    assert payload["passed"] is True
+    assert payload["summary"] == {"failed": 0, "passed": 1, "total": 1}
+    assert (eval_run.output_dir / REAL_REPO_EVAL_REPORT_FILE).is_file()
+    result = eval_run.results[0]
+    assert result.actual_permit_status == "needs_review"
+    assert result.expected_rule_check_passed is True
+    assert result.forbidden_rule_check_passed is True
+    assert result.citation_check_passed is True
+    assert result.secret_leak_check_passed is True
+    assert result.quality_score == 1.0
+    assert result.artifact_dir.is_dir()
+    assert result.investigation_report.is_file()
+
+
+def test_real_repo_eval_cli_writes_artifacts(tmp_path) -> None:
+    repo_root = tmp_path / "repos"
+    repo_root.mkdir()
+    _write_real_repo_fixture(repo_root / "agent-repo")
+    manifest_path = _write_real_repo_manifest(tmp_path, local_path="agent-repo")
+    stdout = StringIO()
+    stderr = StringIO()
+
+    exit_code = main(
+        [
+            "eval-real",
+            str(manifest_path),
+            "--repo-root",
+            str(repo_root),
+            "--run-id",
+            "cli-real",
+            "--output",
+            str(tmp_path / "cli-real-output"),
+        ],
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+    assert exit_code == 0
+    assert stderr.getvalue() == ""
+    assert "Status: real_repo_eval_complete" in stdout.getvalue()
+    assert "Repos: 1/1 passed" in stdout.getvalue()
+    assert (tmp_path / "cli-real-output" / REAL_REPO_EVAL_RESULTS_FILE).is_file()
+    assert (tmp_path / "cli-real-output" / REAL_REPO_EVAL_REPORT_FILE).is_file()
+
+
+def test_real_repo_manifest_resolves_relative_paths(tmp_path) -> None:
+    repo_root = tmp_path / "repos"
+    repo_root.mkdir()
+    manifest_path = _write_real_repo_manifest(tmp_path, local_path="agent-repo")
+
+    cases = load_real_repo_cases(manifest_path, repo_root=repo_root)
+
+    assert cases[0].repo_path == (repo_root / "agent-repo").resolve()
+    assert cases[0].expected_rule_ids_present == (
+        "ci-secret-reference",
+        "ci-write-permission",
+    )
+
+
+def test_real_repo_eval_cli_rejects_missing_manifest(tmp_path) -> None:
+    stdout = StringIO()
+    stderr = StringIO()
+    missing = tmp_path / "missing.json"
+
+    exit_code = main(["eval-real", str(missing)], stdout=stdout, stderr=stderr)
+
+    assert exit_code == 2
+    assert stdout.getvalue() == ""
+    assert f"manifest does not exist: {missing}" in stderr.getvalue()
+
+
+def _write_real_repo_fixture(repo_path: Path) -> None:
+    workflow_dir = repo_path / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True)
+    (repo_path / "README.md").write_text("# Agent repo\n", encoding="utf-8")
+    (workflow_dir / "agent.yml").write_text(
+        """name: Agent
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use secret
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python agent.py
+""",
+        encoding="utf-8",
+    )
+
+
+def _write_real_repo_manifest(tmp_path: Path, *, local_path: str) -> Path:
+    manifest_path = tmp_path / "real-repos.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "repos": [
+                    {
+                        "id": "agent-repo",
+                        "source": "local-test",
+                        "local_path": local_path,
+                        "expected_permit_status": "needs_review",
+                        "expected_rule_ids_present": [
+                            "ci-secret-reference",
+                            "ci-write-permission",
+                        ],
+                        "expected_rule_ids_absent": [
+                            "ci-pull-request-target",
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return manifest_path
