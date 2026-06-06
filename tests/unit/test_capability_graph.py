@@ -108,6 +108,13 @@ def test_graph_builder_adds_ci_workflow_context() -> None:
     assert workflow_nodes[0].id == "workflow:.github/workflows/agent.yml"
     assert len(workflow_facts) == len(findings)
     assert all(finding.source_fact_ids for finding in result.findings)
+    secret_fact = next(
+        fact
+        for fact in workflow_facts
+        if fact.attributes["rule_id"] == "ci-secret-reference"
+    )
+    assert secret_fact.attributes["workflow_job"] == "agent-review"
+    assert secret_fact.attributes["secret_name"] == "GITHUB_TOKEN"
 
 
 def test_graph_builder_output_is_deterministic() -> None:

@@ -316,6 +316,11 @@ def _add_ci_finding(state: _GraphState, finding: Finding) -> str:
             attributes={
                 "rule_id": finding.rule_id,
                 "severity": finding.severity,
+                "workflow_event": evidence.workflow_event,
+                "workflow_job": evidence.workflow_job,
+                "permission_scope": evidence.permission_scope,
+                "secret_name": evidence.secret_name,
+                "context_note": evidence.context_note,
             },
         )
     )

@@ -344,6 +344,21 @@ Backlog:
 | False-positive review | Capture validation-driven scoring fixes. | Done: CI workflow path severity changed from critical to high. |
 | Validation write-up | Record results and next hardening gaps. | Done: `docs/real-repo-validation.md`. |
 
+## Sprint 9: CI Context Hardening
+
+Goal:
+
+- make CI findings directly actionable
+
+Backlog:
+
+| Item | Outcome | Acceptance criteria |
+| --- | --- | --- |
+| Workflow context | Findings include event, job, permission scope, and secret name. | Done: evidence locations carry structured CI context. |
+| Maintenance confidence | Maintenance workflows are still reviewed but marked lower confidence. | Done: stale/dependabot/triage heuristics set medium confidence. |
+| Report UX | Top findings show relevant CI context. | Done: summary and risk report include event/job/scope/secret notes. |
+| Public repo revalidation | Confirm context on public repos. | Done: `validation5-*` runs documented in `docs/ci-context-hardening.md`. |
+
 ## Release Criteria For MVP
 
 MVP is ready when:

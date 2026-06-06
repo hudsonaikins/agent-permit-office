@@ -174,6 +174,11 @@ class EvidenceLocation(StrictModel):
     package: str | None = None
     command: str | None = None
     redacted_snippet: str | None = None
+    workflow_event: str | None = None
+    workflow_job: str | None = None
+    permission_scope: str | None = None
+    secret_name: str | None = None
+    context_note: str | None = None
 
     @model_validator(mode="after")
     def validate_line_range(self) -> EvidenceLocation:

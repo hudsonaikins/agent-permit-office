@@ -154,6 +154,10 @@ Sprint 8 validation items:
 
 - `APO-46`: Validate scanner on public agent repos and typed evidence tools - done
 
+Sprint 9 CI context items:
+
+- `APO-47`: Add workflow event/job/scope context to CI findings - done
+
 ## Operating Rule
 
 Plane is now the execution tracker.

@@ -64,6 +64,7 @@ Current work:
 - [Deep Agent Investigator](docs/deep-agent-investigator.md)
 - [MVP Hardening](docs/mvp-hardening.md)
 - [Real Repo Validation](docs/real-repo-validation.md)
+- [CI Context Hardening](docs/ci-context-hardening.md)
 - [End-to-End System Diagram](docs/system-diagram-end-to-end.md)
 - [Project Management and Sprint Plan](docs/project-management-sprint-plan.md)
 - [Plane Execution Sync](docs/plane-execution-sync.md)

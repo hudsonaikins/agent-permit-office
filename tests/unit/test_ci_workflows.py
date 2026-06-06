@@ -32,6 +32,10 @@ def test_ci_scanner_flags_risky_pull_request_target_fixture() -> None:
     assert findings[0].evidence[0].line_start == 4
     assert findings[1].evidence[0].line_start == 7
     assert findings[2].evidence[0].line_start == 16
+    assert findings[2].evidence[0].workflow_event == "pull_request_target"
+    assert findings[2].evidence[0].workflow_job == "agent-review"
+    assert findings[2].evidence[0].secret_name == "GITHUB_TOKEN"
+    assert findings[3].evidence[1].permission_scope == "write-all"
 
 
 def test_ci_scanner_flags_explicit_write_permissions(tmp_path) -> None:
@@ -65,6 +69,11 @@ jobs:
         "ci-write-permission",
     ]
     assert {finding.evidence[0].line_start for finding in findings} == {6, 7}
+    assert {finding.evidence[0].workflow_job for finding in findings} == {None}
+    assert {finding.evidence[0].permission_scope for finding in findings} == {
+        "contents",
+        "pull-requests",
+    }
 
 
 def test_ci_scanner_flags_pr_target_head_checkout(tmp_path) -> None:
@@ -97,6 +106,44 @@ jobs:
         "ci-pr-target-head-checkout",
     ]
     assert findings[1].evidence[2].line_start == 10
+    assert findings[1].evidence[1].workflow_job == "review"
+    assert findings[1].evidence[2].workflow_job == "review"
+
+
+def test_ci_scanner_marks_maintenance_workflow_context(tmp_path) -> None:
+    workflow_dir = tmp_path / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True)
+    (workflow_dir / "stale.yml").write_text(
+        """name: Stale
+on:
+  schedule:
+    - cron: "0 0 * * *"
+permissions:
+  issues: write
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ secrets.STALE_TOKEN }}"
+"""
+    )
+    inventory = FileInventoryScanner().scan(tmp_path, scan_run_id="run-stale")
+
+    findings = CiWorkflowScanner().scan(
+        tmp_path,
+        scan_run_id="run-stale",
+        inventory=inventory,
+    )
+
+    assert [finding.rule_id for finding in findings] == [
+        "ci-write-permission",
+        "ci-secret-reference",
+    ]
+    assert {finding.confidence for finding in findings} == {"medium"}
+    assert all(
+        "maintenance-workflow heuristic" in (finding.evidence[0].context_note or "")
+        for finding in findings
+    )
 
 
 def test_ci_scanner_leaves_safe_pull_request_workflow_clean(tmp_path) -> None:

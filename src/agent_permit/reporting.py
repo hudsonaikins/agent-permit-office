@@ -31,6 +31,9 @@ def build_summary_markdown(
                 location = evidence.path
                 if evidence.line_start is not None:
                     location = f"{evidence.path}:{evidence.line_start}"
+                context = _evidence_context(evidence)
+                if context:
+                    location = f"{location} ({context})"
             lines.append(f"- [{finding.severity}] {finding.rule_id} at {location}")
 
     lines.extend(["", "## Artifacts"])
@@ -46,3 +49,20 @@ def build_summary_markdown(
         lines.append(f"- {artifact_name}")
 
     return "\n".join(lines) + "\n"
+
+
+def _evidence_context(evidence: object) -> str:
+    parts = []
+    for label, attr in (
+        ("event", "workflow_event"),
+        ("job", "workflow_job"),
+        ("scope", "permission_scope"),
+        ("secret", "secret_name"),
+    ):
+        value = getattr(evidence, attr, None)
+        if value:
+            parts.append(f"{label}={value}")
+    note = getattr(evidence, "context_note", None)
+    if note and "maintenance-workflow heuristic" in note:
+        parts.append("maintenance")
+    return ", ".join(parts)

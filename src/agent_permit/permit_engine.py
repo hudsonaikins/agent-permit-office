@@ -343,6 +343,26 @@ def _control_status_value(status: ControlStatus | str) -> str:
 def _format_location(evidence: EvidenceLocation | None) -> str:
     if evidence is None:
         return "no evidence"
+    context = _evidence_context(evidence)
     if evidence.line_start is None:
-        return evidence.path
-    return f"{evidence.path}:{evidence.line_start}"
+        location = evidence.path
+    else:
+        location = f"{evidence.path}:{evidence.line_start}"
+    if context:
+        return f"{location} ({context})"
+    return location
+
+
+def _evidence_context(evidence: EvidenceLocation) -> str:
+    parts = []
+    for label, value in (
+        ("event", evidence.workflow_event),
+        ("job", evidence.workflow_job),
+        ("scope", evidence.permission_scope),
+        ("secret", evidence.secret_name),
+    ):
+        if value:
+            parts.append(f"{label}={value}")
+    if evidence.context_note and "maintenance-workflow heuristic" in evidence.context_note:
+        parts.append("maintenance")
+    return ", ".join(parts)

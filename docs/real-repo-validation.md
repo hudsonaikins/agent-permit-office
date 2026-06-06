@@ -63,6 +63,6 @@ Initial validation exposed two issues:
 
 ## Next Hardening
 
-- add workflow event/job context to CI findings
-- add rule confidence notes for maintenance workflows
 - add `--format json` for `agent-permit rules`
+- distinguish top-level permissions from job-level permissions explicitly
+- group CI findings by workflow/job in reports
