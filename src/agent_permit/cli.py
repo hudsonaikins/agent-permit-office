@@ -34,6 +34,11 @@ from agent_permit.path_finder import CapabilityPathFinder
 from agent_permit.permit_engine import PermitEngine
 from agent_permit.reporting import build_summary_markdown
 from agent_permit.rule_registry import RULE_DEFINITIONS
+from agent_permit.sarif import (
+    DEFAULT_SARIF_CATEGORY,
+    SARIF_FILE,
+    write_sarif_file,
+)
 from agent_permit.scanners.ci_workflows import CiWorkflowScanner
 from agent_permit.scanners.credential_refs import CredentialReferenceScanner
 from agent_permit.scanners.file_inventory import FileInventoryScanner
@@ -78,6 +83,16 @@ def build_parser() -> argparse.ArgumentParser:
             "gitignore-style pattern to skip during inventory; repeat for "
             "multiple patterns"
         ),
+    )
+    scan_parser.add_argument(
+        "--sarif",
+        action="store_true",
+        help=f"write {SARIF_FILE} in the scan artifact directory",
+    )
+    scan_parser.add_argument(
+        "--sarif-category",
+        default=DEFAULT_SARIF_CATEGORY,
+        help=f"SARIF automation category; default {DEFAULT_SARIF_CATEGORY}",
     )
     investigate_parser = subparsers.add_parser(
         "investigate",
@@ -190,6 +205,25 @@ def build_parser() -> argparse.ArgumentParser:
         "--scanner",
         help="filter rules by scanner name, for example ci_workflows",
     )
+    sarif_parser = subparsers.add_parser(
+        "sarif",
+        help="write SARIF output from existing scan artifacts",
+    )
+    sarif_parser.add_argument(
+        "artifact_dir",
+        type=Path,
+        help=".agent-permit/runs/<run_id> artifact directory",
+    )
+    sarif_parser.add_argument(
+        "--output",
+        type=Path,
+        help=f"SARIF output path; defaults to artifact_dir/{SARIF_FILE}",
+    )
+    sarif_parser.add_argument(
+        "--category",
+        default=DEFAULT_SARIF_CATEGORY,
+        help=f"SARIF automation category; default {DEFAULT_SARIF_CATEGORY}",
+    )
     return parser
 
 
@@ -210,6 +244,8 @@ def main(
             args.run_id,
             ci=args.ci,
             exclude_patterns=args.exclude,
+            write_sarif=args.sarif,
+            sarif_category=args.sarif_category,
             stdout=stdout,
             stderr=stderr,
         )
@@ -246,6 +282,14 @@ def main(
         )
     if args.command == "rules":
         return run_rules(args.scanner, stdout=stdout)
+    if args.command == "sarif":
+        return run_sarif(
+            args.artifact_dir,
+            output_path=args.output,
+            category=args.category,
+            stdout=stdout,
+            stderr=stderr,
+        )
 
     parser.print_help(file=stdout)
     return 0
@@ -257,6 +301,8 @@ def run_scan(
     *,
     ci: bool = False,
     exclude_patterns: Sequence[str] | None = None,
+    write_sarif: bool = False,
+    sarif_category: str = DEFAULT_SARIF_CATEGORY,
     stdout: TextIO,
     stderr: TextIO,
 ) -> int:
@@ -336,6 +382,12 @@ def run_scan(
             scan_run,
             permit_evaluation.risk_report_markdown,
         )
+        sarif_path = None
+        if write_sarif:
+            sarif_path = write_sarif_file(
+                EvidenceContext.load(scan_run.artifact_dir),
+                category=sarif_category,
+            )
         scan_run.status = ScanRunStatus.COMPLETED
         scan_run.completed_at = datetime.now(timezone.utc)
         artifact_writer.write_scan_run(scan_run)
@@ -368,6 +420,8 @@ def run_scan(
     print(f"Controls: {len(permit_evaluation.controls.controls)}", file=stdout)
     print(f"Permit status: {permit_evaluation.permit.status}", file=stdout)
     print(f"Summary: {scan_run.artifact_dir / 'summary.md'}", file=stdout)
+    if sarif_path is not None:
+        print(f"SARIF: {sarif_path}", file=stdout)
     if ci:
         print("CI mode: on", file=stdout)
     print("Next: review summary.md and risk-report.md", file=stdout)
@@ -580,4 +634,37 @@ def run_rules(scanner: str | None, *, stdout: TextIO) -> int:
             f"{rule.scanner}: {rule.title}",
             file=stdout,
         )
+    return 0
+
+
+def run_sarif(
+    artifact_dir: Path,
+    *,
+    output_path: Path | None = None,
+    category: str = DEFAULT_SARIF_CATEGORY,
+    stdout: TextIO,
+    stderr: TextIO,
+) -> int:
+    try:
+        context = EvidenceContext.load(artifact_dir)
+    except (FileNotFoundError, PermissionError, ValueError) as exc:
+        print(f"error: failed to load scan artifacts: {exc}", file=stderr)
+        return 2
+
+    try:
+        sarif_path = write_sarif_file(
+            context,
+            output_path,
+            category=category,
+        )
+    except OSError as exc:
+        print(f"error: failed to write SARIF: {exc}", file=stderr)
+        return 1
+
+    print("Agent Permit Office", file=stdout)
+    print("Status: sarif_complete", file=stdout)
+    print(f"Artifacts: {context.artifact_dir}", file=stdout)
+    print(f"SARIF: {sarif_path}", file=stdout)
+    print(f"Findings: {len(context.findings)}", file=stdout)
+    print(f"Category: {category}", file=stdout)
     return 0

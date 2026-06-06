@@ -44,6 +44,9 @@ For production use, pin `OWNER/agent-permit-office` to a release tag or commit S
 | `exclude` | empty | Newline-separated gitignore-style patterns to skip. |
 | `upload-artifacts` | `true` | Upload `.agent-permit/runs/<run_id>/` as a workflow artifact. |
 | `artifact-name` | `agent-permit-office` | Artifact name. |
+| `sarif` | `false` | Generate `results.sarif` in the scan artifact directory. |
+| `upload-sarif` | `false` | Upload `results.sarif` to GitHub code scanning. Requires `security-events: write`. |
+| `sarif-category` | `agent-permit-office` | Code scanning category. |
 
 ## Outputs
 
@@ -52,6 +55,8 @@ For production use, pin `OWNER/agent-permit-office` to a release tag or commit S
 | `exit_code` | Scanner exit code before artifact upload. |
 | `artifact_dir` | Absolute path to generated run artifacts. |
 | `summary_path` | Absolute path to `summary.md`. |
+| `sarif_path` | Absolute path to `results.sarif` when generated. |
+| `sarif_upload_path` | Repository-relative SARIF path when possible. |
 
 ## Exit Behavior
 
@@ -71,6 +76,51 @@ Artifacts still upload before the final failure step, so failed PRs retain:
 - `controls.json`
 - `graph-paths.json`
 - scanner JSON artifacts
+- optional `results.sarif`
+
+## SARIF And Code Scanning
+
+Generate SARIF but keep upload off:
+
+```yaml
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: OWNER/agent-permit-office@v0.1.0
+        with:
+          path: .
+          sarif: "true"
+```
+
+Upload SARIF to GitHub code scanning:
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: OWNER/agent-permit-office@v0.1.0
+        with:
+          path: .
+          upload-sarif: "true"
+          sarif-category: agent-permit-office
+```
+
+Upload is opt-in because GitHub requires code scanning write permission. The upload step is non-blocking; permit enforcement remains independent, so the action fails based on permit status, not SARIF upload result.
 
 ## Excluding Intentional Fixtures
 
@@ -89,6 +139,6 @@ Default scanner behavior remains strict. Exclusions are opt-in.
 ## Security Notes
 
 - Use `pull_request`, not `pull_request_target`, for untrusted PR scans.
-- Keep workflow permissions at `contents: read` unless a later integration needs more.
+- Keep workflow permissions at `contents: read` unless SARIF upload is enabled.
+- Add `security-events: write` only when `upload-sarif` is `true`.
 - Keep `persist-credentials: false` on checkout unless later steps need push access.
-- SARIF upload is intentionally deferred until stable rule IDs and alert behavior are proven.

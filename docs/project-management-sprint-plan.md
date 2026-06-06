@@ -419,6 +419,23 @@ Backlog:
 | Drift-tolerant checks | Public repo drift does not break exact-count assumptions. | Done: checks status plus present/absent rule IDs, not exact finding counts. |
 | Validation | Existing local clones are evaluated. | Done: 3/3 public repos passed in `/tmp/agent-permit-validation`. |
 
+## Sprint 14: SARIF And Code Scanning
+
+Goal:
+
+- expose deterministic scanner findings in GitHub code scanning without changing the permit source of truth
+
+Backlog:
+
+| Item | Outcome | Acceptance criteria |
+| --- | --- | --- |
+| SARIF writer | Generate `results.sarif` from completed scan artifacts. | Done: `agent-permit scan --sarif` and `agent-permit sarif` both write SARIF 2.1.0 logs. |
+| Stable fingerprints | Reduce duplicate alert churn across repeated scans. | Done: results include deterministic `partialFingerprints`. |
+| GitHub Action surface | Support code scanning upload when explicitly enabled. | Done: composite action has `sarif`, `upload-sarif`, and `sarif-category` inputs. |
+| Permission boundary | Keep upload opt-in and least-privilege. | Done: docs require `security-events: write` only for `upload-sarif`. |
+| Secret safety | Avoid repeating sensitive workflow references in uploaded SARIF. | Done: SARIF omits source snippets and uses file/line locations only. |
+| Agent boundary | Keep Deep Agent output out of code scanning alerts. | Done: SARIF is generated only from deterministic scan artifacts. |
+
 ## Release Criteria For MVP
 
 MVP is ready when:
@@ -457,12 +474,11 @@ Notion page later:
 
 ## Immediate Next Step
 
-Start Sprint 1.
-
-First implementation task:
+Validate Sprint 14 locally:
 
 ```text
-Create Python project scaffold, schemas, artifact writer, and no-op CLI.
+uv run pytest
+uv run agent-permit scan . --ci --exclude "tests/fixtures/**" --sarif
 ```
 
-This gives the project a real delivery spine. Everything else can attach to it.
+After validation, decide whether Sprint 15 should focus on SARIF schema validation, baseline/diff mode, or HTML review output.

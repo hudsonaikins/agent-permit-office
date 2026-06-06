@@ -174,6 +174,10 @@ Sprint 13 real repo eval items:
 
 - `APO-51`: Add real repo eval manifest and runner - done
 
+Sprint 14 SARIF/code scanning items:
+
+- `APO-52`: Add SARIF writer and GitHub code scanning surface - done
+
 ## Operating Rule
 
 Plane is now the execution tracker.

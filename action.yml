@@ -22,6 +22,18 @@ inputs:
     description: Workflow artifact name for scan output.
     required: false
     default: agent-permit-office
+  sarif:
+    description: Generate results.sarif in the scan artifact directory.
+    required: false
+    default: "false"
+  upload-sarif:
+    description: Upload results.sarif to GitHub code scanning. Requires security-events: write in the calling workflow.
+    required: false
+    default: "false"
+  sarif-category:
+    description: Code scanning category for SARIF upload.
+    required: false
+    default: agent-permit-office
 
 outputs:
   exit_code:
@@ -33,6 +45,12 @@ outputs:
   summary_path:
     description: Absolute path to summary.md.
     value: ${{ steps.scan.outputs.summary_path }}
+  sarif_path:
+    description: Absolute path to results.sarif when SARIF is generated.
+    value: ${{ steps.scan.outputs.sarif_path }}
+  sarif_upload_path:
+    description: Repository-relative path to results.sarif when possible.
+    value: ${{ steps.scan.outputs.sarif_upload_path }}
 
 runs:
   using: composite
@@ -47,6 +65,9 @@ runs:
         AGENT_PERMIT_PATH: ${{ inputs.path }}
         AGENT_PERMIT_RUN_ID: ${{ inputs.run-id }}
         AGENT_PERMIT_EXCLUDE: ${{ inputs.exclude }}
+        AGENT_PERMIT_SARIF: ${{ inputs.sarif }}
+        AGENT_PERMIT_UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        AGENT_PERMIT_SARIF_CATEGORY: ${{ inputs.sarif-category }}
       run: |
         set -euo pipefail
 
@@ -58,6 +79,9 @@ runs:
         args=(scan "$target_path" --ci)
         if [[ -n "$AGENT_PERMIT_RUN_ID" ]]; then
           args+=(--run-id "$AGENT_PERMIT_RUN_ID")
+        fi
+        if [[ "$AGENT_PERMIT_SARIF" == "true" || "$AGENT_PERMIT_UPLOAD_SARIF" == "true" ]]; then
+          args+=(--sarif --sarif-category "$AGENT_PERMIT_SARIF_CATEGORY")
         fi
 
         while IFS= read -r pattern; do
@@ -75,16 +99,33 @@ runs:
 
         artifact_dir="$(awk -F'Artifacts: ' '/^Artifacts: /{print $2}' "$output_file" | tail -n1)"
         summary_path="$(awk -F'Summary: ' '/^Summary: /{print $2}' "$output_file" | tail -n1)"
+        sarif_path="$(awk -F'SARIF: ' '/^SARIF: /{print $2}' "$output_file" | tail -n1)"
+        sarif_upload_path=""
+        if [[ -n "$sarif_path" && "$sarif_path" == "$GITHUB_WORKSPACE/"* ]]; then
+          sarif_upload_path="${sarif_path#"$GITHUB_WORKSPACE/"}"
+        elif [[ -n "$sarif_path" && "$sarif_path" != /* ]]; then
+          sarif_upload_path="$sarif_path"
+        fi
 
         {
           echo "exit_code=$scan_status"
           echo "artifact_dir=$artifact_dir"
           echo "summary_path=$summary_path"
+          echo "sarif_path=$sarif_path"
+          echo "sarif_upload_path=$sarif_upload_path"
         } >> "$GITHUB_OUTPUT"
 
         if [[ -n "$summary_path" && -f "$summary_path" ]]; then
           cat "$summary_path" >> "$GITHUB_STEP_SUMMARY"
         fi
+
+    - name: Upload SARIF
+      if: ${{ inputs.upload-sarif == 'true' && steps.scan.outputs.sarif_upload_path != '' }}
+      continue-on-error: true
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif_upload_path }}
+        category: ${{ inputs.sarif-category }}
 
     - name: Upload scan artifacts
       if: ${{ inputs.upload-artifacts == 'true' && steps.scan.outputs.artifact_dir != '' }}

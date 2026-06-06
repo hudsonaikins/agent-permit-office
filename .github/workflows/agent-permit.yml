@@ -26,3 +26,4 @@ jobs:
           exclude: |
             tests/fixtures/**
           artifact-name: agent-permit-office-${{ github.run_id }}
+          sarif: "true"

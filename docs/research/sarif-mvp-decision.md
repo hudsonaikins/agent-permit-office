@@ -4,7 +4,9 @@ Date: 2026-06-06
 
 ## Decision
 
-Defer first-class SARIF generation from the MVP.
+Original decision: defer first-class SARIF generation from the MVP.
+
+Sprint 14 update: SARIF is now implemented as an optional CI/product surface after rule IDs, GitHub Action packaging, Phoenix/local evals, and real-repo evals stabilized.
 
 Ship these first:
 
@@ -13,7 +15,7 @@ Ship these first:
 - `summary.md` for PR and terminal review
 - `risk-report.md`, `permit.yaml`, `controls.json`, `graph-paths.json`, and scanner JSON artifacts
 
-Add SARIF after GitHub Action packaging is stable.
+SARIF was added after GitHub Action packaging became stable.
 
 ## Reasoning
 
@@ -38,7 +40,7 @@ Markdown plus JSON/YAML answers those questions sooner.
 - stable finding IDs and evidence paths
 - CLI UX that works before any hosted service exists
 
-## Defer
+## Deferred In MVP, Implemented In Sprint 14
 
 - `results.sarif` writer
 - `github/codeql-action/upload-sarif` workflow template
@@ -47,7 +49,7 @@ Markdown plus JSON/YAML answers those questions sooner.
 - SARIF validation tests against the 2.1.0 schema
 - alert triage docs
 
-Plane follow-up: `APO-44` Add optional SARIF writer and upload workflow.
+Plane follow-up: `APO-44` Add optional SARIF writer and upload workflow. Completed in Sprint 14.
 
 ## Do Not Build Yet
 
@@ -69,7 +71,7 @@ Build SARIF when all are true:
 
 ## Future Shape
 
-The later implementation should produce:
+The implementation now produces:
 
 ```text
 .agent-permit/runs/<run_id>/
@@ -87,12 +89,25 @@ CLI option:
 uv run agent-permit scan . --ci --sarif
 ```
 
+Existing-artifact option:
+
+```bash
+uv run agent-permit sarif .agent-permit/runs/<run_id>
+```
+
 GitHub Action behavior:
 
 - run scan
 - upload artifacts
-- optionally upload SARIF with `github/codeql-action/upload-sarif`
+- optionally upload SARIF with non-blocking `github/codeql-action/upload-sarif`
 - fail the job based on permit status, not based on SARIF upload success
+
+Status now:
+
+- implemented: SARIF writer from deterministic scan artifacts
+- implemented: deterministic `partialFingerprints`
+- implemented: optional composite action upload with least-needed permissions in caller workflow
+- implemented: SARIF tests for rules, results, locations, fingerprints, and snippet omission
 
 ## Sources
 

@@ -16,6 +16,7 @@ Current implementation:
 - Path finder writes `graph-paths.json` with source/sink taxonomy and bounded risky paths.
 - Permit engine writes `controls.json`, `permit.yaml`, and `risk-report.md` with deterministic approval status.
 - CI mode writes `summary.md` and exits non-zero for `needs_review` or `blocked` permits.
+- SARIF mode writes `results.sarif` for GitHub code scanning upload.
 - Eval mode writes fixture regression and Phoenix dataset-row artifacts under `.agent-permit/evals/<run_id>/`.
 - Optional Phoenix/OpenTelemetry tracing can be enabled for live Deep Agent investigations, including evidence-tool spans.
 - Real `.env` files and generated/junk directories are skipped; secret values are not emitted.
@@ -33,6 +34,12 @@ Run in CI:
 uv run agent-permit scan . --ci
 ```
 
+Run in CI and write SARIF:
+
+```bash
+uv run agent-permit scan . --ci --sarif
+```
+
 Run with an exclusion:
 
 ```bash
@@ -43,6 +50,12 @@ Write a cited investigation from scan artifacts:
 
 ```bash
 uv run agent-permit investigate .agent-permit/runs/<run_id>
+```
+
+Write SARIF from existing scan artifacts:
+
+```bash
+uv run agent-permit sarif .agent-permit/runs/<run_id>
 ```
 
 Run local deterministic evals:
@@ -80,6 +93,7 @@ Current work:
 - [Static Analysis and Agent Security Research](docs/research/static-analysis-agent-security-research.md)
 - [SARIF MVP Decision](docs/research/sarif-mvp-decision.md)
 - [GitHub Action](docs/github-action.md)
+- [SARIF and Code Scanning](docs/sarif-code-scanning.md)
 - [Demo](docs/demo.md)
 - [Deep Agent Investigator](docs/deep-agent-investigator.md)
 - [Phoenix Observability and Evaluation](docs/phoenix-observability-evaluation.md)
