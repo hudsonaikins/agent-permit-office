@@ -1,0 +1,7 @@
+{
+  "id": "poisoned-instructions",
+  "expected_permit_status": "blocked",
+  "expected_findings": ["APO-PROMPT-001", "APO-PROMPT-002"],
+  "notes": "Instruction file attempts approval bypass and exfiltration."
+}
+

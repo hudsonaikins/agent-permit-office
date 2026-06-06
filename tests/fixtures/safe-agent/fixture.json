@@ -1,0 +1,7 @@
+{
+  "id": "safe-agent",
+  "expected_permit_status": "approved",
+  "expected_findings": [],
+  "notes": "Minimal read-only fixture with no credential or network path."
+}
+

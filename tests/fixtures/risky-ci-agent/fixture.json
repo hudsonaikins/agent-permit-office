@@ -1,0 +1,7 @@
+{
+  "id": "risky-ci-agent",
+  "expected_permit_status": "blocked",
+  "expected_findings": ["APO-CI-001", "APO-CI-002"],
+  "notes": "CI runs agent in pull_request_target with write permissions."
+}
+
