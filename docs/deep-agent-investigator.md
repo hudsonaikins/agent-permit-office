@@ -18,6 +18,19 @@ The Deep Agent investigator may read only this bounded evidence set:
 
 It does not read repository files directly, execute shell commands, launch MCP servers, run workflows, fetch secrets, or write repo files.
 
+## Typed Evidence Tools
+
+The optional Deep Agent surface now includes typed read-only helpers:
+
+- `get_finding(identifier)`
+- `find_paths(source_category, sink_category)`
+- `get_agent_bom()`
+- `get_mcp_servers()`
+- `get_credential_refs()`
+- `explain_rule(rule_id)`
+
+These tools read structured scan artifacts only. They do not open arbitrary repo files or execute anything.
+
 ## Local Deterministic Investigation
 
 Run a scan:

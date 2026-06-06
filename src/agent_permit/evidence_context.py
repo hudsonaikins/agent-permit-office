@@ -12,6 +12,7 @@ from agent_permit.models import (
     GraphPathReport,
 )
 from agent_permit.redaction import redact_secret_text
+from agent_permit.rule_registry import RULES_BY_ID
 
 
 ALLOWED_EVIDENCE_ARTIFACTS = frozenset(
@@ -138,11 +139,64 @@ class EvidenceContext:
     def finding_rule_ids(self) -> set[str]:
         return {finding.rule_id for finding in self.findings}
 
+    def get_finding(self, identifier: str) -> list[dict[str, Any]]:
+        matches = [
+            finding.model_dump(mode="json")
+            for finding in self.findings
+            if finding.id == identifier or finding.rule_id == identifier
+        ]
+        return matches
+
+    def find_paths(
+        self,
+        *,
+        source_category: str | None = None,
+        sink_category: str | None = None,
+    ) -> list[dict[str, Any]]:
+        paths = []
+        for graph_path in self.graph_paths.paths:
+            if source_category is not None and graph_path.source_category != source_category:
+                continue
+            if sink_category is not None and graph_path.sink_category != sink_category:
+                continue
+            paths.append(graph_path.model_dump(mode="json"))
+        return paths
+
+    def get_agent_bom(self) -> dict[str, Any]:
+        return self.agent_bom.model_dump(mode="json")
+
+    def get_mcp_servers(self) -> list[dict[str, Any]]:
+        return [
+            server.model_dump(mode="json")
+            for server in self.agent_bom.mcp_servers
+        ]
+
+    def get_credential_refs(self) -> list[dict[str, Any]]:
+        return [
+            credential.model_dump(mode="json")
+            for credential in self.agent_bom.credential_refs
+        ]
+
+    def explain_rule(self, rule_id: str) -> dict[str, Any] | None:
+        rule = RULES_BY_ID.get(rule_id)
+        if rule is None:
+            return None
+        return {
+            "rule_id": rule.rule_id,
+            "scanner": rule.scanner,
+            "title": rule.title,
+            "default_severity": rule.default_severity,
+            "category": rule.category,
+        }
+
 
 def _read_json(path: Path) -> dict[str, Any]:
     if not path.is_file():
         raise FileNotFoundError(f"required artifact not found: {path.name}")
-    return json.loads(redact_secret_text(path.read_text(encoding="utf-8")))
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"artifact must contain a JSON object: {path.name}")
+    return payload
 
 
 def _read_permit_status(path: Path) -> str:

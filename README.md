@@ -63,6 +63,7 @@ Current work:
 - [Demo](docs/demo.md)
 - [Deep Agent Investigator](docs/deep-agent-investigator.md)
 - [MVP Hardening](docs/mvp-hardening.md)
+- [Real Repo Validation](docs/real-repo-validation.md)
 - [End-to-End System Diagram](docs/system-diagram-end-to-end.md)
 - [Project Management and Sprint Plan](docs/project-management-sprint-plan.md)
 - [Plane Execution Sync](docs/plane-execution-sync.md)

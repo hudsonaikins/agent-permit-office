@@ -288,7 +288,7 @@ def _allowed_path(source: TaxonomyEntry, sink: TaxonomyEntry) -> bool:
 
 def _path_severity(source: TaxonomyEntry, sink: TaxonomyEntry) -> Severity:
     if source.category == "workflow_file" and sink.category == "privileged_ci_workflow":
-        return Severity.CRITICAL
+        return Severity.HIGH
     if source.category == "credential" and sink.category == "mcp_server":
         return Severity.HIGH
     if source.category == "instruction_file" and sink.category == "risky_instruction":

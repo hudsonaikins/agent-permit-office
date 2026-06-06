@@ -81,6 +81,32 @@ def test_permit_engine_approves_medium_only_remote_mcp_with_conditions(tmp_path)
     ]
 
 
+def test_permit_engine_needs_review_for_ci_secret_without_pr_target(tmp_path) -> None:
+    target = tmp_path / "ci-secret"
+    workflow_dir = target / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True)
+    (workflow_dir / "agent.yml").write_text(
+        """name: Agent
+on:
+  pull_request:
+permissions:
+  contents: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ secrets.AGENT_TOKEN }}"
+"""
+    )
+
+    evaluation = _evaluate_repo(target, tmp_path / "ci-secret-artifacts")
+
+    assert evaluation.permit.status == "needs_review"
+    assert "run agent workflow in privileged CI context" in (
+        evaluation.permit.forbidden_actions
+    )
+
+
 def _evaluate_repo(target: Path, artifact_dir: Path):
     scan_run_id = f"run-{target.name}"
     inventory = FileInventoryScanner().scan(target, scan_run_id=scan_run_id)

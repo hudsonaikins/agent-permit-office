@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable
+import json
 from typing import Any
 
 from agent_permit.evidence_context import EvidenceContext
@@ -126,12 +127,53 @@ def build_evidence_tools(context: EvidenceContext) -> list[Callable[..., str]]:
             )
         return "\n".join(lines)
 
+    def get_finding(identifier: str) -> str:
+        """Return finding JSON by exact finding ID or rule ID."""
+        return _json_text(context.get_finding(identifier))
+
+    def find_paths(
+        source_category: str | None = None,
+        sink_category: str | None = None,
+    ) -> str:
+        """Return graph path JSON filtered by optional source and sink category."""
+        return _json_text(
+            context.find_paths(
+                source_category=source_category,
+                sink_category=sink_category,
+            )
+        )
+
+    def get_agent_bom() -> str:
+        """Return agent bill of materials JSON."""
+        return _json_text(context.get_agent_bom())
+
+    def get_mcp_servers() -> str:
+        """Return MCP server summaries JSON."""
+        return _json_text(context.get_mcp_servers())
+
+    def get_credential_refs() -> str:
+        """Return credential reference summaries JSON."""
+        return _json_text(context.get_credential_refs())
+
+    def explain_rule(rule_id: str) -> str:
+        """Return deterministic rule metadata JSON for a rule ID."""
+        rule = context.explain_rule(rule_id)
+        if rule is None:
+            return _json_text({"error": "unknown_rule_id", "rule_id": rule_id})
+        return _json_text(rule)
+
     return [
         list_evidence_artifacts,
         read_evidence_artifact,
         summarize_evidence_context,
         list_citation_ids,
         validate_report_citations,
+        get_finding,
+        find_paths,
+        get_agent_bom,
+        get_mcp_servers,
+        get_credential_refs,
+        explain_rule,
     ]
 
 
@@ -211,3 +253,7 @@ def _extract_last_message_text(result: Any) -> str:
     if content is None and isinstance(last_message, dict):
         content = last_message.get("content")
     return str(content)
+
+
+def _json_text(payload: Any) -> str:
+    return json.dumps(payload, indent=2, sort_keys=True)

@@ -329,6 +329,21 @@ Backlog:
 | Real repo smoke | Scan non-fixture repo path. | Done: local self-scan with `--exclude "tests/fixtures/**"` returns `approved`. |
 | Artifact UX | Easier operator inspection. | Done: rules command plus MVP hardening docs. |
 
+## Sprint 8: Real Repo Validation
+
+Goal:
+
+- prove scanner behavior outside fixtures
+
+Backlog:
+
+| Item | Outcome | Acceptance criteria |
+| --- | --- | --- |
+| Typed evidence tools | Deep Agent uses structured access instead of raw artifact reads where possible. | Done: finding/path/BOM/MCP/credential/rule helpers covered by tests. |
+| Public repo smoke | Scan real public agent repos. | Done: three shallow public clones scanned and investigated. |
+| False-positive review | Capture validation-driven scoring fixes. | Done: CI workflow path severity changed from critical to high. |
+| Validation write-up | Record results and next hardening gaps. | Done: `docs/real-repo-validation.md`. |
+
 ## Release Criteria For MVP
 
 MVP is ready when:

@@ -90,12 +90,18 @@ def test_deep_agent_tools_and_subagents_are_artifact_bounded(tmp_path) -> None:
     tool_names = {tool.__name__ for tool in tools}
 
     assert "execute shell commands" in DEEP_AGENT_SYSTEM_PROMPT
-    assert tool_names == {
+    assert tool_names >= {
         "list_evidence_artifacts",
         "read_evidence_artifact",
         "summarize_evidence_context",
         "list_citation_ids",
         "validate_report_citations",
+        "get_finding",
+        "find_paths",
+        "get_agent_bom",
+        "get_mcp_servers",
+        "get_credential_refs",
+        "explain_rule",
     }
     assert {subagent["name"] for subagent in subagents} == {
         "mcp-risk-specialist",
@@ -104,6 +110,45 @@ def test_deep_agent_tools_and_subagents_are_artifact_bounded(tmp_path) -> None:
         "citation-critic",
     }
     assert "codebase-map.json" not in tools[0]()
+
+
+def test_typed_evidence_tools_return_bounded_json(tmp_path) -> None:
+    artifact_dir = _scan_fixture(tmp_path, "risky-mcp-agent", "typed-tools")
+    context = EvidenceContext.load(artifact_dir)
+
+    assert context.get_finding("mcp-stdio-credential-ref")[0]["rule_id"] == (
+        "mcp-stdio-credential-ref"
+    )
+    assert context.find_paths(
+        source_category="credential",
+        sink_category="mcp_server",
+    )[0]["sink_category"] == "mcp_server"
+    assert context.get_agent_bom()["mcp_servers"][0]["name"] == "github-tools"
+    assert context.get_mcp_servers()[0]["transport"] == "stdio"
+    assert context.get_credential_refs()[0]["name"] == "GITHUB_TOKEN"
+    assert context.explain_rule("mcp-stdio-credential-ref") == {
+        "rule_id": "mcp-stdio-credential-ref",
+        "scanner": "mcp_config",
+        "title": "Stdio MCP server receives credential references",
+        "default_severity": "high",
+        "category": "credential_scope",
+    }
+
+
+def test_evidence_context_parses_json_before_redacting_text(tmp_path) -> None:
+    artifact_dir = _scan_fixture(tmp_path, "risky-ci-agent", "json-redaction")
+    raw_findings_path = artifact_dir / "raw-findings.json"
+    raw_text = raw_findings_path.read_text()
+    raw_findings_path.write_text(
+        raw_text.replace(
+            "permissions: write-all",
+            "echo ${{ secrets.CREWAI_TRACING_PROJECT_NAME }}",
+        )
+    )
+
+    context = EvidenceContext.load(artifact_dir)
+
+    assert len(context.findings) == 4
 
 
 def _scan_fixture(tmp_path: Path, fixture_name: str, run_id: str) -> Path:

@@ -150,6 +150,10 @@ Sprint 7 hardening items:
 
 - `APO-45`: Centralize deterministic rule registry and rules CLI - done
 
+Sprint 8 validation items:
+
+- `APO-46`: Validate scanner on public agent repos and typed evidence tools - done
+
 ## Operating Rule
 
 Plane is now the execution tracker.

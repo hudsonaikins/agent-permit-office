@@ -85,7 +85,7 @@ def test_path_finder_finds_workflow_file_to_privileged_workflow_path() -> None:
     assert len(paths) == 1
     assert paths[0].source_id == "file:.github/workflows/agent.yml"
     assert paths[0].sink_id == "workflow:.github/workflows/agent.yml"
-    assert paths[0].severity == "critical"
+    assert paths[0].severity == "high"
 
 
 def test_path_finder_taxonomy_is_deterministic() -> None:
