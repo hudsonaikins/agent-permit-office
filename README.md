@@ -14,7 +14,20 @@ Current implementation:
 - Graph builder writes `codebase-map.json` with files, MCP servers, credential refs, prompt instructions, workflows, and relationship edges.
 - Path finder writes `graph-paths.json` with source/sink taxonomy and bounded risky paths.
 - Permit engine writes `controls.json`, `permit.yaml`, and `risk-report.md` with deterministic approval status.
+- CI mode writes `summary.md` and exits non-zero for `needs_review` or `blocked` permits.
 - Real `.env` files and generated/junk directories are skipped; secret values are not emitted.
+
+Run locally:
+
+```bash
+uv run agent-permit scan .
+```
+
+Run in CI:
+
+```bash
+uv run agent-permit scan . --ci
+```
 
 Current work:
 

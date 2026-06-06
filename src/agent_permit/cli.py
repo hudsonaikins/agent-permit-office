@@ -13,6 +13,7 @@ from agent_permit.capability_graph import CapabilityGraphBuilder
 from agent_permit.models import ScanRunStatus
 from agent_permit.path_finder import CapabilityPathFinder
 from agent_permit.permit_engine import PermitEngine
+from agent_permit.reporting import build_summary_markdown
 from agent_permit.scanners.ci_workflows import CiWorkflowScanner
 from agent_permit.scanners.credential_refs import CredentialReferenceScanner
 from agent_permit.scanners.file_inventory import FileInventoryScanner
@@ -44,6 +45,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--run-id",
         help="explicit run ID for deterministic tests or replay",
     )
+    scan_parser.add_argument(
+        "--ci",
+        action="store_true",
+        help="exit non-zero when permit status requires review or is blocked",
+    )
     return parser
 
 
@@ -59,7 +65,7 @@ def main(
     args = parser.parse_args(argv)
 
     if args.command == "scan":
-        return run_scan(args.path, args.run_id, stdout=stdout, stderr=stderr)
+        return run_scan(args.path, args.run_id, ci=args.ci, stdout=stdout, stderr=stderr)
 
     parser.print_help(file=stdout)
     return 0
@@ -69,6 +75,7 @@ def run_scan(
     target_path: Path,
     run_id: str | None = None,
     *,
+    ci: bool = False,
     stdout: TextIO,
     stderr: TextIO,
 ) -> int:
@@ -126,12 +133,19 @@ def run_scan(
             findings=graph_result.findings,
             graph_paths=graph_path_report,
         )
+        summary_markdown = build_summary_markdown(
+            permit=permit_evaluation.permit,
+            findings=graph_result.findings,
+            graph_paths=graph_path_report,
+            controls=permit_evaluation.controls,
+        )
         artifact_writer.write_agent_bom(scan_run, mcp_result.agent_bom)
         artifact_writer.write_codebase_map(scan_run, graph_result.codebase_map)
         artifact_writer.write_graph_paths(scan_run, graph_path_report)
         artifact_writer.write_raw_findings(scan_run, graph_result.findings)
         artifact_writer.write_controls(scan_run, permit_evaluation.controls)
         artifact_writer.write_permit(scan_run, permit_evaluation.permit)
+        artifact_writer.write_summary(scan_run, summary_markdown)
         artifact_writer.write_risk_report(
             scan_run,
             permit_evaluation.risk_report_markdown,
@@ -167,5 +181,10 @@ def run_scan(
     print(f"Graph paths: {len(graph_path_report.paths)}", file=stdout)
     print(f"Controls: {len(permit_evaluation.controls.controls)}", file=stdout)
     print(f"Permit status: {permit_evaluation.permit.status}", file=stdout)
-    print("Next: report polish and CI mode", file=stdout)
+    print(f"Summary: {scan_run.artifact_dir / 'summary.md'}", file=stdout)
+    if ci:
+        print("CI mode: on", file=stdout)
+    print("Next: GitHub Action packaging and SARIF decision", file=stdout)
+    if ci and permit_evaluation.permit.status in {"blocked", "needs_review"}:
+        return 1
     return 0

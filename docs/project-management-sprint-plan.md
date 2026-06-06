@@ -267,6 +267,8 @@ Backlog:
 
 ## Sprint 4: Permit Engine And Reports
 
+Status: in progress.
+
 Goal:
 
 - produce decision-quality artifacts
@@ -278,8 +280,8 @@ Backlog:
 | Rule engine | 15 to 25 deterministic rules. | Fixture expected findings pass. |
 | Severity scoring | Consistent critical/high/medium/low. | Tests cover score changes from controls. |
 | Permit status | approved, approved_with_conditions, needs_review, blocked. | Fixtures map to expected statuses. |
-| Markdown report | Human-readable risk report. | Includes cited evidence and next actions. |
-| JSON/YAML artifacts | Machine-readable outputs. | Stable schema snapshot tests. |
+| Markdown report | Human-readable risk report. | In progress: `risk-report.md` plus PR-friendly `summary.md` written per scan. |
+| JSON/YAML artifacts | Machine-readable outputs. | In progress: `permit.yaml`, `controls.json`, `graph-paths.json`, and scanner JSON artifacts covered by tests. |
 
 ## Sprint 5: Deep Agent Investigator
 
@@ -307,8 +309,8 @@ Backlog:
 
 | Item | Outcome | Acceptance criteria |
 | --- | --- | --- |
-| CI mode | `agent-permit scan . --ci`. | Non-zero exit for blocked policy. |
-| Markdown summary | PR-friendly output. | Concise result with top findings. |
+| CI mode | `agent-permit scan . --ci`. | Done: exits non-zero for `needs_review` and `blocked`. |
+| Markdown summary | PR-friendly output. | Done: `summary.md` includes status, counts, top findings, and artifact list. |
 | SARIF research spike | Decide whether SARIF belongs in MVP. | Recommendation documented. |
 | Demo repo | Public-ready example showing value. | Safe and risky paths visible. |
 | Setup docs | Clear install/run instructions. | New user can run local scan. |

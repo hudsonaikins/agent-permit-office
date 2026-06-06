@@ -71,6 +71,7 @@ jobs:
     controls = json.loads((artifact_dir / "controls.json").read_text())
     permit_text = (artifact_dir / "permit.yaml").read_text()
     risk_report_text = (artifact_dir / "risk-report.md").read_text()
+    summary_text = (artifact_dir / "summary.md").read_text()
     raw_findings_text = (artifact_dir / "raw-findings.json").read_text()
     raw_findings = json.loads(raw_findings_text)
     scan_run = json.loads((artifact_dir / "scan-run.json").read_text())
@@ -105,6 +106,8 @@ jobs:
     assert "OPENAI_API_KEY" in permit_text
     assert "sk-live-placeholder" not in permit_text
     assert "Status: blocked" in risk_report_text
+    assert "Status: blocked" in summary_text
+    assert "raw-findings.json" in summary_text
     assert len(raw_findings["findings"]) == 6
     assert {
         finding["rule_id"] for finding in raw_findings["findings"]
@@ -132,6 +135,7 @@ jobs:
     assert "Graph paths: 3" in stdout.getvalue()
     assert "Controls: 8" in stdout.getvalue()
     assert "Permit status: blocked" in stdout.getvalue()
+    assert f"Summary: {artifact_dir / 'summary.md'}" in stdout.getvalue()
 
 
 def test_scan_command_rejects_missing_path(tmp_path) -> None:

@@ -161,6 +161,12 @@ class RunArtifactWriter:
             encoding="utf-8",
         )
 
+    def write_summary(self, scan_run: ScanRun, markdown: str) -> None:
+        (scan_run.artifact_dir / "summary.md").write_text(
+            markdown,
+            encoding="utf-8",
+        )
+
     def write_raw_findings(
         self,
         scan_run: ScanRun,
@@ -204,6 +210,11 @@ class RunArtifactWriter:
         )
         (artifact_dir / "risk-report.md").write_text(
             "# Agent Permit Office Risk Report\n\n"
+            "Status: pending scanner implementation.\n",
+            encoding="utf-8",
+        )
+        (artifact_dir / "summary.md").write_text(
+            "# Agent Permit Office Summary\n\n"
             "Status: pending scanner implementation.\n",
             encoding="utf-8",
         )

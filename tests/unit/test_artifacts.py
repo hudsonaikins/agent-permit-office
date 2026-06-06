@@ -45,6 +45,7 @@ def test_create_run_writes_artifact_contract(tmp_path) -> None:
         "raw-findings.json",
         "permit.yaml",
         "risk-report.md",
+        "summary.md",
     }
     assert expected_files == {
         path.name for path in artifact_dir.iterdir() if path.is_file()
@@ -181,13 +182,16 @@ def test_write_controls_permit_and_risk_report_replace_placeholders(tmp_path) ->
     writer.write_controls(scan_run, ControlReport(scan_run_id=scan_run.id))
     writer.write_permit(scan_run, permit)
     writer.write_risk_report(scan_run, "# Risk\n\nStatus: approved\n")
+    writer.write_summary(scan_run, "# Summary\n\nStatus: approved\n")
 
     controls_payload = json.loads((scan_run.artifact_dir / "controls.json").read_text())
     permit_text = (scan_run.artifact_dir / "permit.yaml").read_text()
     report_text = (scan_run.artifact_dir / "risk-report.md").read_text()
+    summary_text = (scan_run.artifact_dir / "summary.md").read_text()
     assert controls_payload["controls"] == []
     assert "status: approved" in permit_text
     assert "Status: approved" in report_text
+    assert "Status: approved" in summary_text
 
 
 def test_write_agent_bom_and_raw_findings_replace_placeholders(tmp_path) -> None:
