@@ -12,6 +12,7 @@ from agent_permit.artifacts import RunArtifactWriter
 from agent_permit.models import ScanRunStatus
 from agent_permit.scanners.file_inventory import FileInventoryScanner
 from agent_permit.scanners.mcp_config import McpConfigScanner
+from agent_permit.scanners.prompt_instructions import PromptInstructionScanner
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -87,8 +88,14 @@ def run_scan(
             scan_run_id=scan_run.id,
             inventory=inventory,
         )
+        prompt_findings = PromptInstructionScanner().scan(
+            target_path,
+            scan_run_id=scan_run.id,
+            inventory=inventory,
+        )
+        findings = [*mcp_result.findings, *prompt_findings]
         artifact_writer.write_agent_bom(scan_run, mcp_result.agent_bom)
-        artifact_writer.write_raw_findings(scan_run, mcp_result.findings)
+        artifact_writer.write_raw_findings(scan_run, findings)
         scan_run.status = ScanRunStatus.COMPLETED
         scan_run.completed_at = datetime.now(timezone.utc)
         artifact_writer.write_scan_run(scan_run)
@@ -112,6 +119,7 @@ def run_scan(
         f"Credential refs: {len(mcp_result.agent_bom.credential_refs)}",
         file=stdout,
     )
-    print(f"Findings: {len(mcp_result.findings)}", file=stdout)
-    print("Next: prompt, credential, and CI scanners", file=stdout)
+    print(f"Prompt findings: {len(prompt_findings)}", file=stdout)
+    print(f"Findings: {len(findings)}", file=stdout)
+    print("Next: credential and CI scanners", file=stdout)
     return 0
