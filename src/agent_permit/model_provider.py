@@ -16,7 +16,11 @@ OPENROUTER_RESPONSE_CACHE_ENV = "OPENROUTER_RESPONSE_CACHE"
 OPENROUTER_RESPONSE_CACHE_TTL_ENV = "OPENROUTER_RESPONSE_CACHE_TTL_SECONDS"
 OPENROUTER_PROMPT_CACHE_ENV = "OPENROUTER_PROMPT_CACHE"
 OPENROUTER_PROMPT_CACHE_TTL_ENV = "OPENROUTER_PROMPT_CACHE_TTL"
+OPENROUTER_TIMEOUT_ENV = "OPENROUTER_TIMEOUT_SECONDS"
+OPENROUTER_MAX_COMPLETION_TOKENS_ENV = "OPENROUTER_MAX_COMPLETION_TOKENS"
 OPENROUTER_DEFAULT_RESPONSE_CACHE_TTL_SECONDS = 300
+OPENROUTER_DEFAULT_TIMEOUT_SECONDS = 45
+OPENROUTER_DEFAULT_MAX_COMPLETION_TOKENS = 2400
 OPENROUTER_MAX_SESSION_ID_LENGTH = 256
 
 _OPENROUTER_ALIASES = {
@@ -38,6 +42,8 @@ class OpenRouterCostControls:
     response_cache_enabled: bool
     response_cache_ttl_seconds: int
     session_id: str | None
+    timeout_seconds: int
+    max_completion_tokens: int
     experimental_metadata_enabled: bool
 
 
@@ -87,6 +93,18 @@ def create_openrouter_chat_model(
         "base_url": OPENROUTER_BASE_URL,
         "temperature": 0,
         "max_retries": 2,
+        "timeout": _env_int(
+            OPENROUTER_TIMEOUT_ENV,
+            default=OPENROUTER_DEFAULT_TIMEOUT_SECONDS,
+            minimum=5,
+            maximum=600,
+        ),
+        "max_completion_tokens": _env_int(
+            OPENROUTER_MAX_COMPLETION_TOKENS_ENV,
+            default=OPENROUTER_DEFAULT_MAX_COMPLETION_TOKENS,
+            minimum=128,
+            maximum=8192,
+        ),
         "default_headers": headers,
         "include_response_headers": True,
     }
@@ -168,6 +186,18 @@ def build_openrouter_cost_controls(
             maximum=86400,
         ),
         session_id=build_openrouter_session_id(session_id),
+        timeout_seconds=_env_int(
+            OPENROUTER_TIMEOUT_ENV,
+            default=OPENROUTER_DEFAULT_TIMEOUT_SECONDS,
+            minimum=5,
+            maximum=600,
+        ),
+        max_completion_tokens=_env_int(
+            OPENROUTER_MAX_COMPLETION_TOKENS_ENV,
+            default=OPENROUTER_DEFAULT_MAX_COMPLETION_TOKENS,
+            minimum=128,
+            maximum=8192,
+        ),
         experimental_metadata_enabled=True,
     )
 

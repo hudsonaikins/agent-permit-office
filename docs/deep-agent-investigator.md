@@ -49,7 +49,8 @@ Run the default MVP model, Claude Sonnet 4.6 through OpenRouter:
 
 ```bash
 uv run --extra deep-agent agent-permit investigate \
-  tests/fixtures/risky-ci-agent/.agent-permit/runs/demo-investigate
+  tests/fixtures/risky-ci-agent/.agent-permit/runs/demo-investigate \
+  --agent-recursion-limit 12
 ```
 
 Output:
@@ -85,6 +86,8 @@ The integration uses `deepagents.create_deep_agent` with:
 - custom evidence tools only
 - specialist subagent specs for MCP, prompt, policy, and citation review
 - OpenRouter prompt caching, response caching, and sticky session routing enabled by default
+- request timeout, max completion tokens, and graph recursion limit to bound live spend
+- `END_OF_REPORT` sentinel check so truncated live reports fail instead of passing citation checks accidentally
 
 ## Offline Deterministic Fallback
 

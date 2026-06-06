@@ -73,6 +73,7 @@ Run escalation:
 ```bash
 uv run --extra deep-agent agent-permit investigate \
   .agent-permit/runs/<run_id> \
+  --agent-recursion-limit 12 \
   --model openrouter:gpt-5.5
 ```
 
@@ -88,6 +89,9 @@ OpenRouter cost controls are enabled by default for live Deep Agent runs:
 - `X-OpenRouter-Cache-TTL: 300` short default response-cache TTL
 - `X-OpenRouter-Experimental-Metadata: enabled` for routing metadata
 - `include_response_headers=True` so LangChain can surface generation metadata when available
+- provider request timeout defaults to `45` seconds
+- max completion tokens default to `2400`
+- live Deep Agent recursion limit defaults to `12` graph steps
 
 Environment toggles:
 
@@ -96,6 +100,8 @@ OPENROUTER_PROMPT_CACHE=true
 OPENROUTER_PROMPT_CACHE_TTL=
 OPENROUTER_RESPONSE_CACHE=true
 OPENROUTER_RESPONSE_CACHE_TTL_SECONDS=300
+OPENROUTER_TIMEOUT_SECONDS=45
+OPENROUTER_MAX_COMPLETION_TOKENS=2400
 ```
 
 Leave `OPENROUTER_PROMPT_CACHE_TTL` empty for the provider default 5-minute prompt cache. Set it to `1h` only for longer demo/review sessions where the higher cache-write price is worth it.
@@ -107,6 +113,7 @@ When LangChain exposes token usage metadata, the CLI writes:
 ```
 
 The file tracks model call count, input/output/total tokens, cached tokens, cache-write tokens, cache hit ratio, and generation IDs.
+Live Deep Agent reports must end with `END_OF_REPORT`; the CLI strips this sentinel before writing the report and fails the run if the sentinel is missing.
 
 ## Notes
 

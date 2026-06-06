@@ -61,6 +61,8 @@ def test_openrouter_chat_model_uses_openai_compatible_base_url() -> None:
             "base_url": OPENROUTER_BASE_URL,
             "temperature": 0,
             "max_retries": 2,
+            "timeout": 45,
+            "max_completion_tokens": 2400,
             "default_headers": {
                 "X-Title": "Agent Permit Office",
                 "X-OpenRouter-Cache": "true",
@@ -104,6 +106,8 @@ def test_openrouter_cost_controls_follow_env(monkeypatch) -> None:
     monkeypatch.setenv("OPENROUTER_RESPONSE_CACHE", "false")
     monkeypatch.setenv("OPENROUTER_RESPONSE_CACHE_TTL_SECONDS", "900")
     monkeypatch.setenv("OPENROUTER_PROMPT_CACHE_TTL", "1h")
+    monkeypatch.setenv("OPENROUTER_TIMEOUT_SECONDS", "30")
+    monkeypatch.setenv("OPENROUTER_MAX_COMPLETION_TOKENS", "2048")
 
     controls = build_openrouter_cost_controls(
         "openrouter:sonnet-4.6",
@@ -116,6 +120,8 @@ def test_openrouter_cost_controls_follow_env(monkeypatch) -> None:
     assert controls.response_cache_enabled is False
     assert controls.response_cache_ttl_seconds == 900
     assert controls.session_id == "agent-permit-office:cost-run"
+    assert controls.timeout_seconds == 30
+    assert controls.max_completion_tokens == 2048
     assert controls.experimental_metadata_enabled is True
 
 

@@ -19,6 +19,10 @@ class DeepAgentInvestigationResult:
     usage_summary: dict[str, Any] | None
 
 
+DEFAULT_DEEP_AGENT_RECURSION_LIMIT = 12
+FINAL_REPORT_SENTINEL = "END_OF_REPORT"
+
+
 DEEP_AGENT_SYSTEM_PROMPT = """You are Agent Permit Office's evidence-bound investigator.
 
 You may only use the provided evidence tools and the bounded scan artifacts they expose.
@@ -26,6 +30,12 @@ Do not claim a finding exists unless it appears in raw-findings.json or graph-pa
 Do not execute shell commands, launch MCP servers, read repository files, read secrets, or
 modify files. Every security claim must cite one of the citation IDs returned by the tools.
 If evidence is insufficient, say what artifact is missing instead of guessing.
+Complete the investigation within the configured graph recursion limit. Prefer a short
+coordinator pass: summarize evidence, inspect the relevant findings or paths, draft the
+report, then return final Markdown. The CLI runs a deterministic citation critic after
+the final answer. Do not create TODO lists or delegate to subagents unless the evidence
+is ambiguous. Keep the final report under 900 words and end it with END_OF_REPORT on
+its own line.
 """
 
 
@@ -40,6 +50,10 @@ def build_investigation_prompt(context: EvidenceContext) -> str:
             f"Graph paths: {summary.graph_paths_count}",
             f"Controls: {summary.controls_count}",
             "Use only citations from list_citation_ids.",
+            "Use at most six evidence-tool calls.",
+            "Do not create TODO lists.",
+            "Return the final Markdown directly; the CLI validates citations after you finish.",
+            f"End the final Markdown with `{FINAL_REPORT_SENTINEL}` on its own line.",
             "Return Markdown.",
         ]
     )
@@ -117,26 +131,6 @@ def build_evidence_tools(context: EvidenceContext) -> list[Callable[..., str]]:
         """List all citation IDs that are valid in the final investigation."""
         return "\n".join(sorted(context.citation_ids()))
 
-    def validate_report_citations(report_markdown: str) -> str:
-        """Validate final Markdown report citations against scan artifacts."""
-        result = critique_investigation_report(context, report_markdown)
-        lines = [f"supported: {str(result.supported).lower()}"]
-        if result.unsupported_citations:
-            lines.append(
-                "unsupported_citations: "
-                + ", ".join(result.unsupported_citations)
-            )
-        if result.unsupported_rule_ids:
-            lines.append(
-                "unsupported_rule_ids: " + ", ".join(result.unsupported_rule_ids)
-            )
-        if result.missing_citation_rule_ids:
-            lines.append(
-                "missing_citation_rule_ids: "
-                + ", ".join(result.missing_citation_rule_ids)
-            )
-        return "\n".join(lines)
-
     def get_finding(identifier: str) -> str:
         """Return finding JSON by exact finding ID or rule ID."""
         return _json_text(context.get_finding(identifier))
@@ -177,7 +171,6 @@ def build_evidence_tools(context: EvidenceContext) -> list[Callable[..., str]]:
         read_evidence_artifact,
         summarize_evidence_context,
         list_citation_ids,
-        validate_report_citations,
         get_finding,
         find_paths,
         get_agent_bom,
@@ -262,12 +255,14 @@ def invoke_deep_agent_investigator(
     model: str,
     enable_langsmith: bool = False,
     enable_phoenix: bool = False,
+    recursion_limit: int = DEFAULT_DEEP_AGENT_RECURSION_LIMIT,
 ) -> str:
     return invoke_deep_agent_investigator_with_metadata(
         context,
         model=model,
         enable_langsmith=enable_langsmith,
         enable_phoenix=enable_phoenix,
+        recursion_limit=recursion_limit,
     ).report_markdown
 
 
@@ -277,7 +272,10 @@ def invoke_deep_agent_investigator_with_metadata(
     model: str,
     enable_langsmith: bool = False,
     enable_phoenix: bool = False,
+    recursion_limit: int = DEFAULT_DEEP_AGENT_RECURSION_LIMIT,
 ) -> DeepAgentInvestigationResult:
+    if recursion_limit < 2:
+        raise RuntimeError("Deep Agent recursion limit must be at least 2.")
     agent = create_deep_agent_investigator(
         context,
         model=model,
@@ -300,10 +298,14 @@ def invoke_deep_agent_investigator_with_metadata(
                 "permit_status": context.permit_status,
             },
             "tags": ["agent-permit-office", "deep-agent-investigator"],
+            "recursion_limit": recursion_limit,
         },
     )
+    report_markdown = _strip_final_report_sentinel(
+        _extract_last_message_text(result)
+    )
     return DeepAgentInvestigationResult(
-        report_markdown=_extract_last_message_text(result),
+        report_markdown=report_markdown,
         usage_summary=summarize_openrouter_usage(result),
     )
 
@@ -390,6 +392,16 @@ def _extract_last_message_text(result: Any) -> str:
     if content is None and isinstance(last_message, dict):
         content = last_message.get("content")
     return str(content)
+
+
+def _strip_final_report_sentinel(report_markdown: str) -> str:
+    stripped = report_markdown.rstrip()
+    if not stripped.endswith(FINAL_REPORT_SENTINEL):
+        raise RuntimeError(
+            "Deep Agent report was truncated or missing END_OF_REPORT sentinel. "
+            "Increase OPENROUTER_MAX_COMPLETION_TOKENS or reduce report scope."
+        )
+    return stripped[: -len(FINAL_REPORT_SENTINEL)].rstrip() + "\n"
 
 
 def _json_text(payload: Any) -> str:

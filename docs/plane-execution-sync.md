@@ -190,6 +190,14 @@ Sprint 17 OpenRouter model provider items:
 
 - `APO-55`: Wire OpenRouter default model for required Deep Agent assessment - done
 
+Sprint 18 OpenRouter cost controls items:
+
+- `APO-56`: Add OpenRouter cache controls and usage metrics - done
+
+Sprint 19 live Deep Agent validation items:
+
+- `APO-57`: Validate live Deep Agent report path with Sonnet - done
+
 ## Operating Rule
 
 Plane is now the execution tracker.

@@ -484,6 +484,37 @@ Backlog:
 | Secret boundary | Require explicit API key. | Done: missing `OPENROUTER_API_KEY` fails before live model creation. |
 | Docs | Explain provider and model choice. | Done: `docs/openrouter-model-decision.md`. |
 
+## Sprint 18: OpenRouter Cost Controls
+
+Goal:
+
+- bound live model spend and expose cache/cost telemetry
+
+Backlog:
+
+| Item | Outcome | Acceptance criteria |
+| --- | --- | --- |
+| Prompt cache | Enable Claude prompt caching through OpenRouter. | Done: Sonnet requests include top-level `cache_control`. |
+| Response cache | Save exact rerun spend. | Done: `X-OpenRouter-Cache` and short TTL are enabled by default. |
+| Sticky routing | Improve cache hit rate for agent loops. | Done: scan run ID becomes OpenRouter `session_id`. |
+| Usage artifact | Make token/cache cost visible. | Done: live runs write `openrouter-usage.json` when metadata is available. |
+
+## Sprint 19: Live Deep Agent Validation
+
+Goal:
+
+- prove the required live Deep Agent path can produce a complete citation-checked permit report
+
+Backlog:
+
+| Item | Outcome | Acceptance criteria |
+| --- | --- | --- |
+| Live fixture run | Run Sonnet 4.6 on risky CI fixture. | Done: blocked fixture produced a 97-line report with citation check passed. |
+| Recursion guard | Prevent unbounded agent loops. | Done: `--agent-recursion-limit` defaults to 12 and was validated live. |
+| Output guard | Prevent clipped reports from passing. | Done: live reports require `END_OF_REPORT` sentinel before writing. |
+| Cost telemetry | Capture cache and token metrics. | Done: live run recorded 68.36% cache hit ratio and 27,450 cached tokens. |
+| Tool surface fix | Stop validation-tool loop. | Done: removed `validate_report_citations` from agent tools; CLI critic remains authoritative. |
+
 ## Release Criteria For MVP
 
 MVP is ready when:
@@ -522,11 +553,13 @@ Notion page later:
 
 ## Immediate Next Step
 
-Validate Sprint 17 locally:
+Validate Sprint 19 locally:
 
 ```text
 uv run pytest
-env -u OPENROUTER_API_KEY uv run agent-permit investigate .agent-permit/runs/<run_id>
+OPENROUTER_TIMEOUT_SECONDS=30 OPENROUTER_MAX_COMPLETION_TOKENS=2400 \
+  uv run --extra deep-agent agent-permit investigate .agent-permit/runs/<run_id> \
+  --agent-recursion-limit 20
 ```
 
-After validation, Sprint 18 should add live Deep Agent real-repo evals with model-quality scoring and Phoenix trace review.
+After validation, Sprint 20 should run the live Deep Agent path with Phoenix tracing and one local real-repo target.

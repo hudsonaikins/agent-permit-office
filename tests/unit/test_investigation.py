@@ -11,7 +11,9 @@ from agent_permit.deep_agent import (
     DEEP_AGENT_SYSTEM_PROMPT,
     build_evidence_tools,
     build_subagent_specs,
+    invoke_deep_agent_investigator_with_metadata,
     summarize_openrouter_usage,
+    _strip_final_report_sentinel,
 )
 from agent_permit.evidence_context import EvidenceContext
 from agent_permit.investigation import (
@@ -134,7 +136,6 @@ def test_deep_agent_tools_and_subagents_are_artifact_bounded(tmp_path) -> None:
         "read_evidence_artifact",
         "summarize_evidence_context",
         "list_citation_ids",
-        "validate_report_citations",
         "get_finding",
         "find_paths",
         "get_agent_bom",
@@ -149,6 +150,18 @@ def test_deep_agent_tools_and_subagents_are_artifact_bounded(tmp_path) -> None:
         "citation-critic",
     }
     assert "codebase-map.json" not in tools[0]()
+
+
+def test_live_deep_agent_rejects_too_low_recursion_limit(tmp_path) -> None:
+    artifact_dir = _scan_fixture(tmp_path, "safe-agent", "low-recursion")
+    context = EvidenceContext.load(artifact_dir)
+
+    with pytest.raises(RuntimeError, match="recursion limit"):
+        invoke_deep_agent_investigator_with_metadata(
+            context,
+            model="openrouter:sonnet-4.6",
+            recursion_limit=1,
+        )
 
 
 def test_evidence_tools_emit_observability_metadata(tmp_path, monkeypatch) -> None:
@@ -244,6 +257,12 @@ def test_openrouter_usage_summary_tracks_cache_metrics() -> None:
         "generation_ids": ["gen-test"],
         "cache_hit_ratio": 0.75,
     }
+
+
+def test_final_report_sentinel_is_required_and_stripped() -> None:
+    assert _strip_final_report_sentinel("# Report\n\nEND_OF_REPORT") == "# Report\n"
+    with pytest.raises(RuntimeError, match="END_OF_REPORT"):
+        _strip_final_report_sentinel("# Report")
 
 
 def test_evidence_context_parses_json_before_redacting_text(tmp_path) -> None:

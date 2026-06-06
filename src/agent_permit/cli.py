@@ -22,7 +22,10 @@ from agent_permit.baseline import (
     write_finding_diff_artifacts,
 )
 from agent_permit.capability_graph import CapabilityGraphBuilder
-from agent_permit.deep_agent import invoke_deep_agent_investigator_with_metadata
+from agent_permit.deep_agent import (
+    DEFAULT_DEEP_AGENT_RECURSION_LIMIT,
+    invoke_deep_agent_investigator_with_metadata,
+)
 from agent_permit.evidence_context import EvidenceContext
 from agent_permit.evals import (
     DEFAULT_PHOENIX_BASE_URL,
@@ -165,6 +168,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "write the offline deterministic citation report without invoking "
             "the required live Deep Agent path"
+        ),
+    )
+    investigate_parser.add_argument(
+        "--agent-recursion-limit",
+        type=int,
+        default=DEFAULT_DEEP_AGENT_RECURSION_LIMIT,
+        help=(
+            "max LangGraph recursion steps for live Deep Agent runs; default "
+            f"{DEFAULT_DEEP_AGENT_RECURSION_LIMIT}"
         ),
     )
     investigate_parser.add_argument(
@@ -347,6 +359,7 @@ def main(
             output_path=args.output,
             model=args.model,
             deterministic_only=args.deterministic_only,
+            agent_recursion_limit=args.agent_recursion_limit,
             enable_langsmith=args.langsmith,
             enable_phoenix=args.phoenix,
             stdout=stdout,
@@ -612,6 +625,7 @@ def run_investigate(
     output_path: Path | None = None,
     model: str | None = None,
     deterministic_only: bool = False,
+    agent_recursion_limit: int = DEFAULT_DEEP_AGENT_RECURSION_LIMIT,
     enable_langsmith: bool = False,
     enable_phoenix: bool = False,
     stdout: TextIO,
@@ -638,6 +652,7 @@ def run_investigate(
                 model=selected_model,
                 enable_langsmith=enable_langsmith,
                 enable_phoenix=enable_phoenix,
+                recursion_limit=agent_recursion_limit,
             )
             report_markdown = investigation_result.report_markdown
             usage_summary = investigation_result.usage_summary
@@ -675,6 +690,7 @@ def run_investigate(
     print(f"Citation check: {'passed' if critic_result.supported else 'failed'}", file=stdout)
     if selected_model:
         print(f"Deep Agent model: {selected_model}", file=stdout)
+        print(f"Deep Agent recursion limit: {agent_recursion_limit}", file=stdout)
     if usage_summary is not None and usage_path is not None:
         print(f"OpenRouter usage: {usage_path}", file=stdout)
         print(
