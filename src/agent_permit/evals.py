@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 import shutil
 import time
@@ -20,6 +21,8 @@ EVALS_DIR = "evals"
 EVAL_RESULTS_FILE = "eval-results.json"
 EVAL_REPORT_FILE = "eval-report.md"
 PHOENIX_DATASET_ROWS_FILE = "phoenix-dataset-rows.jsonl"
+DEFAULT_PHOENIX_DATASET_NAME = "agent-permit-fixture-evals"
+DEFAULT_PHOENIX_BASE_URL = "http://localhost:6006"
 
 SECRET_LEAK_MARKERS = (
     "-----BEGIN PRIVATE KEY-----",
@@ -71,6 +74,15 @@ class FixtureEvalRun:
     @property
     def passed(self) -> bool:
         return all(result.passed for result in self.results)
+
+
+@dataclass(frozen=True)
+class PhoenixDatasetUploadResult:
+    dataset_name: str
+    example_count: int
+    base_url: str
+    dataset_id: str | None = None
+    version_id: str | None = None
 
 
 def create_eval_run_id(now: datetime | None = None) -> str:
@@ -242,6 +254,52 @@ def build_phoenix_dataset_rows(eval_run: FixtureEvalRun) -> list[dict[str, Any]]
     return rows
 
 
+def upload_phoenix_dataset_rows(
+    eval_run: FixtureEvalRun,
+    *,
+    dataset_name: str = DEFAULT_PHOENIX_DATASET_NAME,
+    base_url: str | None = None,
+) -> PhoenixDatasetUploadResult:
+    try:
+        from phoenix.client import Client
+    except ImportError as exc:
+        raise RuntimeError(
+            "Phoenix dataset upload requires the optional extra: "
+            "uv run --extra phoenix agent-permit eval --upload-phoenix ..."
+        ) from exc
+
+    rows = build_phoenix_dataset_rows(eval_run)
+    examples = [
+        {
+            "id": row["id"],
+            "input": row["inputs"],
+            "output": row["outputs"],
+            "metadata": row["metadata"],
+        }
+        for row in rows
+    ]
+    resolved_base_url = base_url or os.environ.get(
+        "PHOENIX_BASE_URL",
+        DEFAULT_PHOENIX_BASE_URL,
+    )
+    client = Client(base_url=resolved_base_url)
+    dataset = client.datasets.create_dataset(
+        name=dataset_name,
+        dataset_description=(
+            "Agent Permit Office deterministic fixture evals. "
+            "Permit status remains scanner-owned source of truth."
+        ),
+        examples=examples,
+    )
+    return PhoenixDatasetUploadResult(
+        dataset_name=_read_attr(dataset, "name", dataset_name),
+        example_count=int(_read_attr(dataset, "example_count", len(examples))),
+        base_url=resolved_base_url,
+        dataset_id=_optional_str_attr(dataset, "id"),
+        version_id=_optional_str_attr(dataset, "version_id"),
+    )
+
+
 def build_eval_report_markdown(eval_run: FixtureEvalRun) -> str:
     passed = sum(1 for result in eval_run.results if result.passed)
     total = len(eval_run.results)
@@ -342,6 +400,19 @@ def _artifact_tree_contains_secret_marker(artifact_dir: Path) -> bool:
         if any(marker in text for marker in SECRET_LEAK_MARKERS):
             return True
     return False
+
+
+def _read_attr(target: object, name: str, default: object) -> object:
+    if isinstance(target, dict):
+        return target.get(name, default)
+    return getattr(target, name, default)
+
+
+def _optional_str_attr(target: object, name: str) -> str | None:
+    value = _read_attr(target, name, None)
+    if value is None:
+        return None
+    return str(value)
 
 
 class _NullWriter:

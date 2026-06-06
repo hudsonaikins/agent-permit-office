@@ -14,10 +14,13 @@ from agent_permit.capability_graph import CapabilityGraphBuilder
 from agent_permit.deep_agent import invoke_deep_agent_investigator
 from agent_permit.evidence_context import EvidenceContext
 from agent_permit.evals import (
+    DEFAULT_PHOENIX_BASE_URL,
+    DEFAULT_PHOENIX_DATASET_NAME,
     EVAL_REPORT_FILE,
     EVAL_RESULTS_FILE,
     PHOENIX_DATASET_ROWS_FILE,
     run_fixture_eval_suite,
+    upload_phoenix_dataset_rows,
 )
 from agent_permit.investigation import (
     build_investigation_markdown,
@@ -124,6 +127,26 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="output directory; defaults to .agent-permit/evals/<run_id>",
     )
+    eval_parser.add_argument(
+        "--upload-phoenix",
+        action="store_true",
+        help="upload eval rows to a running Phoenix dataset server",
+    )
+    eval_parser.add_argument(
+        "--phoenix-base-url",
+        help=(
+            "Phoenix base URL for dataset upload; default PHOENIX_BASE_URL "
+            f"or {DEFAULT_PHOENIX_BASE_URL}"
+        ),
+    )
+    eval_parser.add_argument(
+        "--phoenix-dataset-name",
+        default=DEFAULT_PHOENIX_DATASET_NAME,
+        help=(
+            "Phoenix dataset name for upload; default "
+            f"{DEFAULT_PHOENIX_DATASET_NAME}"
+        ),
+    )
     rules_parser = subparsers.add_parser(
         "rules",
         help="list deterministic scanner rules",
@@ -170,6 +193,9 @@ def main(
             args.fixture_root,
             eval_run_id=args.run_id,
             output_dir=args.output,
+            upload_phoenix=args.upload_phoenix,
+            phoenix_base_url=args.phoenix_base_url,
+            phoenix_dataset_name=args.phoenix_dataset_name,
             stdout=stdout,
             stderr=stderr,
         )
@@ -377,6 +403,9 @@ def run_eval(
     *,
     eval_run_id: str | None = None,
     output_dir: Path | None = None,
+    upload_phoenix: bool = False,
+    phoenix_base_url: str | None = None,
+    phoenix_dataset_name: str = DEFAULT_PHOENIX_DATASET_NAME,
     stdout: TextIO,
     stderr: TextIO,
 ) -> int:
@@ -397,6 +426,18 @@ def run_eval(
         print(f"error: eval failed: {exc}", file=stderr)
         return 1
 
+    phoenix_upload_result = None
+    if upload_phoenix:
+        try:
+            phoenix_upload_result = upload_phoenix_dataset_rows(
+                eval_run,
+                dataset_name=phoenix_dataset_name,
+                base_url=phoenix_base_url,
+            )
+        except Exception as exc:
+            print(f"error: Phoenix upload failed: {exc}", file=stderr)
+            return 1
+
     passed = sum(1 for result in eval_run.results if result.passed)
     total = len(eval_run.results)
     print("Agent Permit Office", file=stdout)
@@ -411,6 +452,16 @@ def run_eval(
         f"Phoenix dataset rows: {eval_run.output_dir / PHOENIX_DATASET_ROWS_FILE}",
         file=stdout,
     )
+    if phoenix_upload_result is not None:
+        print("Phoenix upload: complete", file=stdout)
+        print(f"Phoenix base URL: {phoenix_upload_result.base_url}", file=stdout)
+        print(f"Phoenix dataset: {phoenix_upload_result.dataset_name}", file=stdout)
+        print(
+            f"Phoenix examples: {phoenix_upload_result.example_count}",
+            file=stdout,
+        )
+        if phoenix_upload_result.dataset_id:
+            print(f"Phoenix dataset ID: {phoenix_upload_result.dataset_id}", file=stdout)
     return 0 if eval_run.passed else 1
 
 

@@ -51,6 +51,12 @@ Run local deterministic evals:
 uv run agent-permit eval tests/fixtures
 ```
 
+Upload eval rows to a running local Phoenix server:
+
+```bash
+uv run --extra phoenix agent-permit eval tests/fixtures --upload-phoenix
+```
+
 List deterministic rules:
 
 ```bash

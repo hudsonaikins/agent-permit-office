@@ -65,7 +65,22 @@ This remains the regression gate even when Phoenix tracing is enabled.
 }
 ```
 
-These rows are not uploaded automatically. They are local review/export artifacts until we decide to require a running Phoenix server for dataset creation.
+These rows are not uploaded automatically. Upload is explicit and requires a running Phoenix server:
+
+```bash
+uv run --extra phoenix agent-permit eval tests/fixtures \
+  --run-id local-eval-upload \
+  --upload-phoenix \
+  --phoenix-base-url http://localhost:6006 \
+  --phoenix-dataset-name agent-permit-fixture-evals
+```
+
+Upload behavior:
+
+- uses stable example IDs such as `agent-permit-fixture-risky-ci-agent`
+- writes local eval artifacts before upload
+- returns non-zero if Phoenix upload is requested but the server/client fails
+- never changes deterministic permit status
 
 ## Phoenix Tracing
 
@@ -98,6 +113,8 @@ uv run --extra deep-agent --extra phoenix agent-permit investigate \
 
 The `--phoenix` flag initializes `phoenix.otel.register()` before the Deep Agent runtime is created. With the OpenInference LangChain instrumentor installed, LangChain and LangGraph calls can emit spans to Phoenix.
 
+Live Deep Agent validation also requires a model provider key. Without one, validate Phoenix locally through `agent-permit eval --upload-phoenix`; that proves dataset connectivity without LLM spend.
+
 ## What Phoenix Should Show
 
 Useful trace fields:
@@ -118,31 +135,52 @@ Useful review questions:
 - Did it spend tokens on irrelevant artifacts?
 - Did model choice change unsupported citation rate?
 
+## Live Validation Checklist
+
+1. Start Phoenix locally.
+2. Run `agent-permit eval --upload-phoenix`.
+3. Confirm dataset `agent-permit-fixture-evals` appears in Phoenix.
+4. Run one Deep Agent investigation with `--phoenix` only after a local model key is available.
+5. Confirm evidence-tool spans show bounded tool names and output sizes.
+
+Sprint 12 local smoke:
+
+```bash
+uv run --extra phoenix agent-permit eval tests/fixtures \
+  --run-id sprint12-upload \
+  --output /tmp/apo-sprint12-upload \
+  --upload-phoenix \
+  --phoenix-base-url http://localhost:6006 \
+  --phoenix-dataset-name agent-permit-sprint12-smoke
+```
+
+Result: 4/4 fixture cases passed and 4 examples uploaded to local Phoenix dataset `agent-permit-sprint12-smoke`. A live Deep Agent trace still requires model credentials.
+
 ## What We Do Not Turn On Yet
 
 Not yet:
 
-- server-side Phoenix datasets
 - Phoenix LLM-as-judge evals
 - online production evals
 - alerts
 - hosted Arize AX
 
-Reason: the scanner truth set is still small. First prove deterministic fixture evals and trace visibility. Then add Phoenix datasets from real repo validation runs.
+Reason: the scanner truth set is still small. First prove deterministic fixture evals, dataset upload, and trace visibility. Then add Phoenix datasets from real repo validation runs.
 
 ## Next Build Slice
 
 Next useful slice:
 
-1. Add optional Phoenix dataset upload when a local server is running.
-2. Add a small LLM judge only for investigation quality, not permit status.
-3. Compare Deep Agent prompts/models by citation failure rate and token cost.
-4. Create trace-derived datasets from real repo validation runs.
+1. Add a small LLM judge only for investigation quality, not permit status.
+2. Compare Deep Agent prompts/models by citation failure rate and token cost.
+3. Create trace-derived datasets from real repo validation runs.
+4. Add CI artifact upload for `eval-results.json` and `phoenix-dataset-rows.jsonl`.
 
 ## References
 
 - Phoenix OTEL setup: https://www.arize.com/docs/phoenix/tracing/how-to-tracing/setup-tracing/setup-using-phoenix-otel
 - OpenInference LangChain instrumentation: https://arize-ai.github.io/openinference/python/instrumentation/openinference-instrumentation-langchain/
 - Phoenix dataset creation: https://arize.com/docs/phoenix/datasets-and-experiments/how-to-datasets/creating-datasets
+- Phoenix dataset updating: https://arize.com/docs/phoenix/datasets-and-experiments/how-to-datasets/updating-datasets
 - Phoenix evals overview: https://arize.com/docs/phoenix/evaluation/llm-evals
 - Phoenix eval SDK: https://arize.com/docs/phoenix/sdk-api-reference/python/arize-phoenix-evals

@@ -389,6 +389,21 @@ Backlog:
 | Quality metrics | Local eval captures investigation quality signals. | Done: status, rule ID, citation, secret-leak checks produce `quality_score`. |
 | Docs | Operator understands trace fields and export file. | Done: Phoenix and Deep Agent docs updated. |
 
+## Sprint 12: Phoenix Live Validation
+
+Goal:
+
+- prove local Phoenix can receive eval datasets without making hosted observability required
+
+Backlog:
+
+| Item | Outcome | Acceptance criteria |
+| --- | --- | --- |
+| Upload flag | Operator explicitly uploads eval rows to Phoenix. | Done: `agent-permit eval --upload-phoenix` calls Phoenix client only when requested. |
+| Stable dataset examples | Repeated uploads do not create uncontrolled duplicate fixtures. | Done: upload uses stable fixture example IDs. |
+| Failure boundary | Missing server/client fails only explicit upload path. | Done: default eval remains local; upload failures return non-zero. |
+| Live validation docs | Operator can start Phoenix and validate dataset connectivity. | Done: Phoenix docs include upload command and checklist. |
+
 ## Release Criteria For MVP
 
 MVP is ready when:

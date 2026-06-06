@@ -166,6 +166,10 @@ Sprint 11 trace quality items:
 
 - `APO-49`: Add Phoenix trace-quality metadata and eval exports - done
 
+Sprint 12 Phoenix live validation items:
+
+- `APO-50`: Add Phoenix live validation and dataset upload - done
+
 ## Operating Rule
 
 Plane is now the execution tracker.
