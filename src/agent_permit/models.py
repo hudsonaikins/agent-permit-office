@@ -283,6 +283,40 @@ class FindingDiffReport(StrictModel):
     unchanged_findings: list[FindingBaselineEntry] = Field(default_factory=list)
 
 
+class TrustedWorkflowPermission(StrictModel):
+    path: str
+    scope: str
+    event: str | None = None
+    job: str | None = None
+
+
+class AgentPermitPolicy(StrictModel):
+    version: int = 1
+    allowed_mcp_servers: list[str] = Field(default_factory=list)
+    approved_credential_refs: list[str] = Field(default_factory=list)
+    trusted_workflow_permissions: list[TrustedWorkflowPermission] = Field(
+        default_factory=list
+    )
+    severity_overrides: dict[str, Severity] = Field(default_factory=dict)
+
+
+class PolicyAdjustment(StrictModel):
+    finding_id: str
+    rule_id: str
+    action: str
+    from_severity: Severity
+    to_severity: Severity
+    rationale: str
+
+
+class PolicyEvaluation(StrictModel):
+    scan_run_id: str
+    policy_path: str
+    adjustments: list[PolicyAdjustment] = Field(default_factory=list)
+    findings_before: int
+    findings_after: int
+
+
 class EvidencePack(StrictModel):
     id: str
     finding_id: str

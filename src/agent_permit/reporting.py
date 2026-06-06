@@ -45,6 +45,7 @@ def build_summary_markdown(
         "codebase-map.json",
         "graph-paths.json",
         "controls.json",
+        "policy-evaluation.json",
     ):
         lines.append(f"- {artifact_name}")
 

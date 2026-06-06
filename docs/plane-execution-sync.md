@@ -182,6 +182,10 @@ Sprint 15 baseline/diff items:
 
 - `APO-53`: Add baseline and diff mode for CI findings - done
 
+Sprint 16 repository policy items:
+
+- `APO-54`: Add repository policy configuration for trusted agent surfaces - done
+
 ## Operating Rule
 
 Plane is now the execution tracker.

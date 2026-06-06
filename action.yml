@@ -42,6 +42,10 @@ inputs:
     description: When true with baseline, fail CI only when new findings are introduced.
     required: false
     default: "false"
+  policy:
+    description: Optional policy JSON path, relative to GITHUB_WORKSPACE unless absolute.
+    required: false
+    default: ""
 
 outputs:
   exit_code:
@@ -78,6 +82,7 @@ runs:
         AGENT_PERMIT_SARIF_CATEGORY: ${{ inputs.sarif-category }}
         AGENT_PERMIT_BASELINE: ${{ inputs.baseline }}
         AGENT_PERMIT_CI_NEW_FINDINGS_ONLY: ${{ inputs.ci-new-findings-only }}
+        AGENT_PERMIT_POLICY: ${{ inputs.policy }}
       run: |
         set -euo pipefail
 
@@ -102,6 +107,13 @@ runs:
         fi
         if [[ "$AGENT_PERMIT_CI_NEW_FINDINGS_ONLY" == "true" ]]; then
           args+=(--ci-new-findings-only)
+        fi
+        if [[ -n "$AGENT_PERMIT_POLICY" ]]; then
+          policy_path="$AGENT_PERMIT_POLICY"
+          if [[ "$policy_path" != /* ]]; then
+            policy_path="$GITHUB_WORKSPACE/$policy_path"
+          fi
+          args+=(--policy "$policy_path")
         fi
 
         while IFS= read -r pattern; do

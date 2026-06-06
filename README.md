@@ -18,6 +18,7 @@ Current implementation:
 - CI mode writes `summary.md` and exits non-zero for `needs_review` or `blocked` permits.
 - SARIF mode writes `results.sarif` for GitHub code scanning upload.
 - Baseline mode writes deterministic finding baselines and diffs so CI can fail only on newly introduced findings.
+- Policy mode reads `agent-permit-policy.json` or `--policy` and writes `policy-evaluation.json`.
 - Eval mode writes fixture regression and Phoenix dataset-row artifacts under `.agent-permit/evals/<run_id>/`.
 - Optional Phoenix/OpenTelemetry tracing can be enabled for live Deep Agent investigations, including evidence-tool spans.
 - Real `.env` files and generated/junk directories are skipped; secret values are not emitted.
@@ -71,6 +72,12 @@ Run CI against an existing baseline and fail only on new findings:
 uv run agent-permit scan . --ci --baseline .agent-permit/finding-baseline.json --ci-new-findings-only
 ```
 
+Run with an explicit repo policy:
+
+```bash
+uv run agent-permit scan . --ci --policy agent-permit-policy.json
+```
+
 Run local deterministic evals:
 
 ```bash
@@ -108,6 +115,7 @@ Current work:
 - [GitHub Action](docs/github-action.md)
 - [SARIF and Code Scanning](docs/sarif-code-scanning.md)
 - [Baseline and Diff Mode](docs/baseline-diff-mode.md)
+- [Repository Policy Configuration](docs/repository-policy-config.md)
 - [Demo](docs/demo.md)
 - [Deep Agent Investigator](docs/deep-agent-investigator.md)
 - [Phoenix Observability and Evaluation](docs/phoenix-observability-evaluation.md)

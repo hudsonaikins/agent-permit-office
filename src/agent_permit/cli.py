@@ -43,6 +43,14 @@ from agent_permit.investigation import (
 from agent_permit.models import ScanRunStatus
 from agent_permit.path_finder import CapabilityPathFinder
 from agent_permit.permit_engine import PermitEngine
+from agent_permit.policy import (
+    DEFAULT_POLICY_FILE,
+    POLICY_EVALUATION_FILE,
+    apply_policy,
+    apply_policy_to_graph_paths,
+    load_policy,
+    write_policy_evaluation,
+)
 from agent_permit.reporting import build_summary_markdown
 from agent_permit.rule_registry import RULE_DEFINITIONS
 from agent_permit.sarif import (
@@ -116,6 +124,14 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "with --ci and --baseline, exit non-zero only when the scan "
             "introduces new baseline diff findings"
+        ),
+    )
+    scan_parser.add_argument(
+        "--policy",
+        type=Path,
+        help=(
+            f"policy JSON path; defaults to {DEFAULT_POLICY_FILE} when present "
+            "in the scanned repo"
         ),
     )
     investigate_parser = subparsers.add_parser(
@@ -309,6 +325,7 @@ def main(
             sarif_category=args.sarif_category,
             baseline_path=args.baseline,
             ci_new_findings_only=args.ci_new_findings_only,
+            policy_path=args.policy,
             stdout=stdout,
             stderr=stderr,
         )
@@ -383,6 +400,7 @@ def run_scan(
     sarif_category: str = DEFAULT_SARIF_CATEGORY,
     baseline_path: Path | None = None,
     ci_new_findings_only: bool = False,
+    policy_path: Path | None = None,
     stdout: TextIO,
     stderr: TextIO,
 ) -> int:
@@ -403,9 +421,15 @@ def run_scan(
         except (FileNotFoundError, ValueError, PermissionError) as exc:
             print(f"error: failed to load baseline: {exc}", file=stderr)
             return 2
+    try:
+        policy, resolved_policy_path = load_policy(target_path, policy_path)
+    except (FileNotFoundError, ValueError, PermissionError) as exc:
+        print(f"error: failed to load policy: {exc}", file=stderr)
+        return 2
 
     try:
         finding_diff = None
+        policy_evaluation = None
         sarif_path = None
         artifact_writer = RunArtifactWriter()
         scan_run = artifact_writer.create_run(
@@ -414,6 +438,7 @@ def run_scan(
             scan_options={
                 "mode": "deterministic-scanners",
                 "exclude_patterns": list(exclude_patterns or []),
+                "policy_path": str(resolved_policy_path) if resolved_policy_path else None,
             },
         )
         inventory = FileInventoryScanner(
@@ -442,6 +467,13 @@ def run_scan(
             inventory=inventory,
         )
         findings = [*mcp_result.findings, *prompt_findings, *ci_findings]
+        if policy is not None and resolved_policy_path is not None:
+            findings, policy_evaluation = apply_policy(
+                findings,
+                policy=policy,
+                policy_path=resolved_policy_path,
+                scan_run_id=scan_run.id,
+            )
         graph_result = CapabilityGraphBuilder().build(
             scan_run_id=scan_run.id,
             inventory=inventory,
@@ -451,6 +483,11 @@ def run_scan(
         graph_path_report = CapabilityPathFinder().find_paths(
             graph_result.codebase_map,
         )
+        if policy is not None:
+            graph_path_report = apply_policy_to_graph_paths(
+                graph_path_report,
+                policy=policy,
+            )
         permit_evaluation = PermitEngine().evaluate(
             scan_run_id=scan_run.id,
             artifact_dir=scan_run.artifact_dir,
@@ -487,6 +524,8 @@ def run_scan(
             scan_run,
             permit_evaluation.risk_report_markdown,
         )
+        if policy_evaluation is not None:
+            write_policy_evaluation(policy_evaluation, scan_run.artifact_dir)
         if finding_diff is not None:
             write_finding_diff_artifacts(
                 finding_diff,
@@ -529,6 +568,13 @@ def run_scan(
     print(f"Controls: {len(permit_evaluation.controls.controls)}", file=stdout)
     print(f"Permit status: {permit_evaluation.permit.status}", file=stdout)
     print(f"Summary: {scan_run.artifact_dir / 'summary.md'}", file=stdout)
+    if policy_evaluation is not None:
+        print(f"Policy: {resolved_policy_path}", file=stdout)
+        print(f"Policy adjustments: {len(policy_evaluation.adjustments)}", file=stdout)
+        print(
+            f"Policy evaluation: {scan_run.artifact_dir / POLICY_EVALUATION_FILE}",
+            file=stdout,
+        )
     if finding_diff is not None:
         print(f"Baseline: {baseline_path}", file=stdout)
         print(f"New findings: {len(finding_diff.new_findings)}", file=stdout)

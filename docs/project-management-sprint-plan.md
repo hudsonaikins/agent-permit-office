@@ -452,6 +452,22 @@ Backlog:
 | GitHub Action inputs | Expose baseline mode in the composite action. | Done: `baseline` and `ci-new-findings-only` inputs added. |
 | Safety boundary | Keep baseline safe to commit. | Done: baseline entries omit source snippets and raw secret values. |
 
+## Sprint 16: Repository Policy Configuration
+
+Goal:
+
+- let teams encode trusted repo-local agent surfaces without hiding deterministic findings
+
+Backlog:
+
+| Item | Outcome | Acceptance criteria |
+| --- | --- | --- |
+| Policy schema | Define deterministic JSON config. | Done: `agent-permit-policy.json` supports MCP server, credential, workflow permission, and severity override fields. |
+| Policy loader | Auto-load default policy or explicit `--policy`. | Done: missing default is ignored; invalid explicit policy fails. |
+| Policy application | Apply scoped policy decisions to findings and graph paths. | Done: matching findings stay visible with lowered severity/review flags. |
+| Policy artifact | Make policy effects reviewable. | Done: `policy-evaluation.json` records adjustments. |
+| Action input | Expose policy path in CI. | Done: composite action accepts `policy`. |
+
 ## Release Criteria For MVP
 
 MVP is ready when:
@@ -497,4 +513,4 @@ uv run pytest
 uv run agent-permit scan . --ci --exclude "tests/fixtures/**"
 ```
 
-After validation, decide whether Sprint 16 should focus on SARIF schema validation, HTML review output, or repo policy configuration.
+After validation, decide whether Sprint 17 should focus on SARIF schema validation, HTML review output, or repo policy templates.

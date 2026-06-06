@@ -215,6 +215,9 @@ def _is_privileged_workflow(
         if fact is None:
             continue
         if str(fact.attributes.get("rule_id") or "") in risky_rules:
+            severity = str(fact.attributes.get("severity") or "")
+            if severity in {"low", "info"}:
+                continue
             return True
     return False
 

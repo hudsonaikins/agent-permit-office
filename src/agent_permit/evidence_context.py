@@ -24,6 +24,7 @@ ALLOWED_EVIDENCE_ARTIFACTS = frozenset(
         "finding-diff.md",
         "graph-paths.json",
         "permit.yaml",
+        "policy-evaluation.json",
         "raw-findings.json",
         "risk-report.md",
         "summary.md",

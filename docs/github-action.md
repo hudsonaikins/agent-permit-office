@@ -49,6 +49,7 @@ For production use, pin `OWNER/agent-permit-office` to a release tag or commit S
 | `sarif-category` | `agent-permit-office` | Code scanning category. |
 | `baseline` | empty | Optional finding baseline JSON path, relative to `GITHUB_WORKSPACE` unless absolute. |
 | `ci-new-findings-only` | `false` | With `baseline`, fail CI only when new findings are introduced. |
+| `policy` | empty | Optional policy JSON path, relative to `GITHUB_WORKSPACE` unless absolute. |
 
 ## Outputs
 
@@ -147,6 +148,29 @@ jobs:
 ```
 
 Default `--ci` behavior is unchanged. Without `ci-new-findings-only`, the action still fails on `needs_review` or `blocked` permit status. With `ci-new-findings-only`, the action writes `finding-diff.json` and `finding-diff.md`, keeps permit status unchanged, and exits non-zero only when new findings appear.
+
+## Policy Configuration
+
+Use `policy` to pass a repo-local policy file:
+
+```yaml
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: OWNER/agent-permit-office@v0.1.0
+        with:
+          path: .
+          policy: agent-permit-policy.json
+```
+
+If `agent-permit-policy.json` exists at the scanned repo root, the CLI also auto-loads it. Policy mode writes `policy-evaluation.json` and keeps matching findings visible.
 
 ## Excluding Intentional Fixtures
 

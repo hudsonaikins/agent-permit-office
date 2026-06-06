@@ -74,6 +74,8 @@ def _control_report(
 def _finding_controls(findings: list[Finding]) -> list[ControlSignal]:
     controls: list[ControlSignal] = []
     for finding in findings:
+        if not _finding_requires_control(finding):
+            continue
         if finding.rule_id == "mcp-unpinned-package-command":
             controls.append(
                 _missing_control(
@@ -212,12 +214,13 @@ def _allowed_actions(status: PermitStatus | str) -> list[str]:
 
 def _forbidden_actions(status: PermitStatus | str, findings: list[Finding]) -> list[str]:
     forbidden: set[str] = set()
+    active_findings = [finding for finding in findings if _finding_requires_control(finding)]
     if _permit_status_value(status) == "blocked":
         forbidden.add("enable agent tool execution")
         forbidden.add("grant credentials to agent or MCP runtime")
-    if any(finding.rule_id.startswith("ci-") for finding in findings):
+    if any(finding.rule_id.startswith("ci-") for finding in active_findings):
         forbidden.add("run agent workflow in privileged CI context")
-    if any(finding.rule_id.startswith("prompt-") for finding in findings):
+    if any(finding.rule_id.startswith("prompt-") for finding in active_findings):
         forbidden.add("run agent with poisoned instruction file")
     return sorted(forbidden)
 
@@ -338,6 +341,12 @@ def _permit_status_value(status: PermitStatus | str) -> str:
 
 def _control_status_value(status: ControlStatus | str) -> str:
     return status.value if isinstance(status, ControlStatus) else status
+
+
+def _finding_requires_control(finding: Finding) -> bool:
+    if finding.requires_human_review:
+        return True
+    return _severity_value(finding.severity) in {"critical", "high", "medium"}
 
 
 def _format_location(evidence: EvidenceLocation | None) -> str:
