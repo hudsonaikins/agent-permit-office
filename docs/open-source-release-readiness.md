@@ -61,9 +61,9 @@ Do not publish until these are true:
 | Support | `SUPPORT.md` tells users what is community vs paid. | added |
 | README | README has install, quickstart, demo, architecture, limits, and OpenRouter/Phoenix notes. | partial |
 | Demo artifact | HTML report screenshot or committed sanitized sample report is linked. | strategy added; sample missing |
-| Packaging | package metadata is public-ready; release tags are defined. | partial |
+| Packaging | package metadata is public-ready; release tags are defined. | metadata aligned; tags missing |
 | CI | GitHub Actions run tests and self-scan with fixture exclusions. | added |
-| Secret hygiene | no `.env.local`, generated private reports, API keys, or live traces are committed. | needs check |
+| Secret hygiene | no `.env.local`, generated private reports, API keys, or live traces are committed. | checked locally; rerun before publish |
 | Legal/commercial | license, trademark, open-core boundary, and company docs reviewed. | missing |
 
 ## What Goes Open

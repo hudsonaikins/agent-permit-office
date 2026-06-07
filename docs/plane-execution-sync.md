@@ -226,6 +226,10 @@ Sprint 26 public repo hardening items:
 
 - `APO-64`: Add public repo governance and release hardening - done
 
+Sprint 27 product hygiene and market review items:
+
+- `APO-65`: Review repo hygiene and product market scope - done
+
 ## Operating Rule
 
 Plane is now the execution tracker.

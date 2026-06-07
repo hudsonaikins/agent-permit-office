@@ -629,6 +629,23 @@ Backlog:
 | Project sync | README and Plane sync reference Sprint 26 artifacts. | Done: README links sanitized demo artifact strategy; Plane sync records `APO-64`. |
 | Local proof | Changes do not break current MVP. | Done: `uv run --frozen --all-extras pytest` passed 117 tests; help smoke passed; self-scan approved with fixture exclusions. |
 
+## Sprint 27: Product Hygiene And Market Review
+
+Goal:
+
+- clean local generated bloat and sharpen the product/business narrative before public launch
+
+Backlog:
+
+| Item | Outcome | Acceptance criteria |
+| --- | --- | --- |
+| Repo hygiene audit | Tracked vs generated bloat is classified. | Done: repo size, tracked docs/tests, package contents, ignored artifacts, and workflow overlap audited. |
+| Safe cleanup | Generated local bloat is removed without deleting user artifacts. | Done: removed generated `dist/`, `.pytest_cache/`, and `__pycache__/`; left ignored `.agent-permit/` and `.env.local` intact. |
+| Product review | Scope, workflow, value, niche, weaknesses, open-core model, and customer discovery are documented. | Done: added `docs/product-scope-market-review.md`. |
+| Source-backed market lens | Current adjacent vendors and OWASP taxonomies are cited. | Done: cited OWASP, Wiz, Snyk, Palo Alto, Lakera, Protect AI, and Prompt Security/SentinelOne. |
+| Project sync | README and Plane sync reference Sprint 27 artifacts. | Done: README links product scope and market review; Plane sync records `APO-65`. |
+| Local proof | Changes do not break current MVP. | Done: `uv run --frozen --all-extras pytest` passed 117 tests; help smoke passed; self-scan approved with fixture exclusions. |
+
 ## Release Criteria For MVP
 
 MVP is ready when:
