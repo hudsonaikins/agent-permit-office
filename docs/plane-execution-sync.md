@@ -230,6 +230,10 @@ Sprint 27 product hygiene and market review items:
 
 - `APO-65`: Review repo hygiene and product market scope - done
 
+Sprint 28 severity rollup and analytics planning items:
+
+- `APO-66`: Fix severity rollup consistency and aggregate report validation - validation blocked by OpenRouter credits
+
 ## Operating Rule
 
 Plane is now the execution tracker.

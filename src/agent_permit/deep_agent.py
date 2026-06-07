@@ -27,6 +27,9 @@ DEEP_AGENT_SYSTEM_PROMPT = """You are Agent Permit Office's evidence-bound inves
 
 You may only use the provided evidence tools and the bounded scan artifacts they expose.
 Do not claim a finding exists unless it appears in raw-findings.json or graph-paths.json.
+When reporting aggregate finding severity counts, use only the exact counts from
+summarize_evidence_context and raw-findings.json. Do not include graph paths or
+controls in finding severity totals.
 Do not execute shell commands, launch MCP servers, read repository files, read secrets, or
 modify files. Every security claim must cite one of the citation IDs returned by the tools.
 If evidence is insufficient, say what artifact is missing instead of guessing.
@@ -52,6 +55,11 @@ def build_investigation_prompt(context: EvidenceContext) -> str:
             f"Scan run: {summary.scan_run_id}",
             f"Permit status: {summary.permit_status}",
             f"Findings: {summary.findings_count}",
+            "Finding severity counts: "
+            + ", ".join(
+                f"{severity}={count}"
+                for severity, count in summary.finding_severity_counts.items()
+            ),
             f"Graph paths: {summary.graph_paths_count}",
             f"Controls: {summary.controls_count}",
             "Use only citations from list_citation_ids.",
@@ -128,6 +136,8 @@ def build_evidence_tools(context: EvidenceContext) -> list[Callable[..., str]]:
                 f"scan_run_id: {summary.scan_run_id}",
                 f"permit_status: {summary.permit_status}",
                 f"findings_count: {summary.findings_count}",
+                "finding_severity_counts: "
+                + json.dumps(summary.finding_severity_counts, sort_keys=True),
                 f"graph_paths_count: {summary.graph_paths_count}",
                 f"controls_count: {summary.controls_count}",
                 "credential_names: "

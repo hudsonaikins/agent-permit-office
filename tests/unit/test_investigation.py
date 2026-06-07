@@ -49,8 +49,10 @@ def test_investigation_report_uses_supported_citations(tmp_path) -> None:
     critic = critique_investigation_report(context, report)
 
     assert critic.supported is True
+    assert critic.aggregate_mismatches == ()
     assert "[rule:mcp-stdio-credential-ref]" in report
     assert "Permit status: `needs_review`" in report
+    assert "Finding severity counts: critical=0, high=1, medium=1, low=0, info=0" in report
 
 
 def test_critic_rejects_invented_claims(tmp_path) -> None:
@@ -67,6 +69,23 @@ def test_critic_rejects_invented_claims(tmp_path) -> None:
     assert critic.supported is False
     assert critic.unsupported_citations == ("finding:not-real",)
     assert critic.unsupported_rule_ids == ("ci-secret-reference",)
+
+
+def test_critic_rejects_wrong_aggregate_severity_counts(tmp_path) -> None:
+    artifact_dir = _scan_fixture(tmp_path, "risky-ci-agent", "aggregate-mismatch")
+    context = EvidenceContext.load(artifact_dir)
+    report = (
+        "# Bad Aggregate Report\n\n"
+        "Scan produced 4 findings: 1 critical, 3 high, 1 medium. "
+        "[artifact:raw-findings.json]\n\n"
+        "The critical rule is ci-pr-target-write-token. "
+        "[rule:ci-pr-target-write-token]\n"
+    )
+
+    critic = critique_investigation_report(context, report)
+
+    assert critic.supported is False
+    assert critic.aggregate_mismatches == ("high: claimed 3, expected 2",)
 
 
 def test_investigate_cli_requires_openrouter_for_default_product_path(
@@ -166,6 +185,7 @@ def test_deep_agent_tools_and_subagents_are_artifact_bounded(tmp_path) -> None:
 
     assert "execute shell commands" in DEEP_AGENT_SYSTEM_PROMPT
     assert "Every mention of a scanner rule ID" in DEEP_AGENT_SYSTEM_PROMPT
+    assert "aggregate finding severity counts" in DEEP_AGENT_SYSTEM_PROMPT
     assert "Do not write preamble" in DEEP_AGENT_SYSTEM_PROMPT
     assert "Never write literal citation templates" in DEEP_AGENT_SYSTEM_PROMPT
     assert tool_names >= {

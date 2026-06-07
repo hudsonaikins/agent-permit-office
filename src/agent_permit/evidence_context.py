@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -47,6 +48,7 @@ class EvidenceSummary:
     findings_count: int
     graph_paths_count: int
     controls_count: int
+    finding_severity_counts: dict[str, int]
     credential_names: tuple[str, ...]
     available_artifacts: tuple[str, ...]
 
@@ -113,6 +115,7 @@ class EvidenceContext:
             findings_count=len(self.findings),
             graph_paths_count=len(self.graph_paths.paths),
             controls_count=len(self.controls.controls),
+            finding_severity_counts=self.finding_severity_counts(),
             credential_names=tuple(
                 sorted({credential.name for credential in self.agent_bom.credential_refs})
             ),
@@ -142,6 +145,13 @@ class EvidenceContext:
 
     def finding_rule_ids(self) -> set[str]:
         return {finding.rule_id for finding in self.findings}
+
+    def finding_severity_counts(self) -> dict[str, int]:
+        counts: Counter[str] = Counter(str(finding.severity) for finding in self.findings)
+        return {
+            severity: counts.get(severity, 0)
+            for severity in ("critical", "high", "medium", "low", "info")
+        }
 
     def get_finding(self, identifier: str) -> list[dict[str, Any]]:
         matches = [

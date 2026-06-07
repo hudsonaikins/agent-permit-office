@@ -962,6 +962,8 @@ def run_investigate(
             print(f"Unsupported rule id: {rule_id}", file=stderr)
         for rule_id in critic_result.missing_citation_rule_ids:
             print(f"Missing rule citation: {rule_id}", file=stderr)
+        for mismatch in critic_result.aggregate_mismatches:
+            print(f"Aggregate mismatch: {mismatch}", file=stderr)
         return 1
     return 0
 
@@ -1034,6 +1036,7 @@ def run_live_validate(
         "unsupported_citations": [],
         "unsupported_rule_ids": [],
         "missing_citation_rule_ids": [],
+        "aggregate_mismatches": [],
         "status": "not_run",
     }
     if report_path.is_file():
@@ -1048,6 +1051,7 @@ def run_live_validate(
             "missing_citation_rule_ids": list(
                 critic_result.missing_citation_rule_ids
             ),
+            "aggregate_mismatches": list(critic_result.aggregate_mismatches),
             "status": "passed" if critic_result.supported else "failed",
         }
 

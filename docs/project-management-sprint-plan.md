@@ -646,6 +646,24 @@ Backlog:
 | Project sync | README and Plane sync reference Sprint 27 artifacts. | Done: README links product scope and market review; Plane sync records `APO-65`. |
 | Local proof | Changes do not break current MVP. | Done: `uv run --frozen --all-extras pytest` passed 117 tests; help smoke passed; self-scan approved with fixture exclusions. |
 
+## Sprint 28: Severity Rollup And Analytics Planning
+
+Goal:
+
+- fix aggregate severity drift found by live T3 Code validation and define next product analytics layer
+
+Backlog:
+
+| Item | Outcome | Acceptance criteria |
+| --- | --- | --- |
+| Finding severity rollup | Permit summaries count findings only. | Done: graph path severities are no longer added to `findings_summary`. |
+| Deep Agent aggregate context | Agent receives exact severity totals. | Done: prompt and evidence summary include `finding_severity_counts`. |
+| Citation critic aggregate check | Wrong severity totals fail validation. | Done: critic rejects mismatched `N critical/high/medium/low/info` claims. |
+| Regression tests | T3 mismatch class is covered locally. | Done: tests cover finding-only summaries and aggregate mismatch rejection. |
+| T3 deterministic validation | Fixed counts reproduce on T3 Code scan. | Done: T3 deterministic rerun produced `critical: 2`, `high: 2`, `medium: 50`. |
+| T3 live validation | Fixed live Deep Agent report is rerun. | Blocked: OpenRouter returned `402 Insufficient credits`. |
+| Analytics roadmap | Product analytics next layer is scoped. | Done: added `docs/product-analytics-evals-roadmap.md`. |
+
 ## Release Criteria For MVP
 
 MVP is ready when:

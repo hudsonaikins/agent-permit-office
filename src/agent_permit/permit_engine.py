@@ -49,7 +49,7 @@ class PermitEngine:
             forbidden_actions=_forbidden_actions(status, findings),
             required_approvals=_required_approvals(controls),
             conditions=_conditions(status, findings, graph_paths, controls),
-            findings_summary=_finding_summary(findings, graph_paths),
+            findings_summary=_finding_summary(findings),
             evidence_bundle_path=str(artifact_dir),
         )
         return PermitEvaluation(
@@ -253,15 +253,10 @@ def _conditions(
     return sorted(conditions)
 
 
-def _finding_summary(
-    findings: list[Finding],
-    graph_paths: GraphPathReport,
-) -> dict[Severity, int]:
+def _finding_summary(findings: list[Finding]) -> dict[Severity, int]:
     counts: Counter[Severity] = Counter()
     for finding in findings:
         counts[finding.severity] += 1
-    for path in graph_paths.paths:
-        counts[path.severity] += 1
     return dict(sorted(counts.items(), key=lambda item: _severity_rank(item[0])))
 
 

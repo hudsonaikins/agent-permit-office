@@ -59,6 +59,18 @@ def test_permit_engine_blocks_critical_prompt_and_ci_risks(tmp_path) -> None:
     assert "run agent workflow in privileged CI context" in risky_ci.permit.forbidden_actions
 
 
+def test_permit_finding_summary_counts_findings_only(tmp_path) -> None:
+    evaluation = _evaluate_repo(FIXTURES_DIR / "risky-ci-agent", tmp_path / "risky-ci")
+
+    assert len(evaluation.controls.controls) == 5
+    assert len(evaluation.permit.findings_summary) == 3
+    assert evaluation.permit.findings_summary == {
+        "critical": 1,
+        "high": 2,
+        "medium": 1,
+    }
+
+
 def test_permit_engine_approves_medium_only_remote_mcp_with_conditions(tmp_path) -> None:
     target = tmp_path / "remote-mcp"
     target.mkdir()
