@@ -515,6 +515,22 @@ Backlog:
 | Cost telemetry | Capture cache and token metrics. | Done: live run recorded 68.36% cache hit ratio and 27,450 cached tokens. |
 | Tool surface fix | Stop validation-tool loop. | Done: removed `validate_report_citations` from agent tools; CLI critic remains authoritative. |
 
+## Sprint 20: Phoenix And Real Repo Live Validation
+
+Goal:
+
+- prove live Deep Agent tracing and one real repo report with Sonnet 4.6
+
+Backlog:
+
+| Item | Outcome | Acceptance criteria |
+| --- | --- | --- |
+| Phoenix endpoint | Export traces to local Phoenix without HTTP errors. | Done: collector endpoint normalizes `http://localhost:6006` to `/v1/traces`; rerun emitted no 405 errors. |
+| Prompt quality | Prevent uncited rule IDs and fake dates. | Done: prompt now forbids dates not in artifacts and requires same-row `[rule:<rule_id>]` citations. |
+| Real repo scan | Scan one real local repo. | Done: `/tmp/agent-permit-validation/open_deep_research` scanned with 4 findings, 2 paths, 6 controls, `needs_review`. |
+| Real repo live report | Produce citation-checked Deep Agent report. | Done: Sonnet 4.6 report passed citation critic with 88 lines and no sentinel residue. |
+| Cost telemetry | Record real-repo usage. | Done: 3 model calls, 32,340 total tokens, 17,213 cached tokens, 57.21% cache hit ratio. |
+
 ## Release Criteria For MVP
 
 MVP is ready when:
@@ -553,13 +569,15 @@ Notion page later:
 
 ## Immediate Next Step
 
-Validate Sprint 19 locally:
+Validate Sprint 20 locally:
 
 ```text
 uv run pytest
-OPENROUTER_TIMEOUT_SECONDS=30 OPENROUTER_MAX_COMPLETION_TOKENS=2400 \
-  uv run --extra deep-agent agent-permit investigate .agent-permit/runs/<run_id> \
-  --agent-recursion-limit 20
+PHOENIX_COLLECTOR_ENDPOINT=http://localhost:6006 \
+  OPENROUTER_TIMEOUT_SECONDS=30 \
+  OPENROUTER_MAX_COMPLETION_TOKENS=2400 \
+  uv run --extra deep-agent --extra phoenix agent-permit investigate \
+  .agent-permit/runs/<run_id> --agent-recursion-limit 20 --phoenix
 ```
 
-After validation, Sprint 20 should run the live Deep Agent path with Phoenix tracing and one local real-repo target.
+After validation, Sprint 21 should productize a repeatable live validation harness instead of relying on manual shell wrappers.

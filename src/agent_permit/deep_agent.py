@@ -30,6 +30,9 @@ Do not claim a finding exists unless it appears in raw-findings.json or graph-pa
 Do not execute shell commands, launch MCP servers, read repository files, read secrets, or
 modify files. Every security claim must cite one of the citation IDs returned by the tools.
 If evidence is insufficient, say what artifact is missing instead of guessing.
+Every mention of a scanner rule ID must include the matching [rule:<rule_id>] citation
+in the same paragraph or table row. Do not include calendar dates unless a scan artifact
+contains that exact date. Do not write preamble before the report heading.
 Complete the investigation within the configured graph recursion limit. Prefer a short
 coordinator pass: summarize evidence, inspect the relevant findings or paths, draft the
 report, then return final Markdown. The CLI runs a deterministic citation critic after
@@ -52,6 +55,9 @@ def build_investigation_prompt(context: EvidenceContext) -> str:
             "Use only citations from list_citation_ids.",
             "Use at most six evidence-tool calls.",
             "Do not create TODO lists.",
+            "Do not include a calendar date unless it is present in the scan artifacts.",
+            "Do not write any preamble before the report heading.",
+            "Every rule ID mention must include [rule:<rule_id>] in the same paragraph or table row.",
             "Return the final Markdown directly; the CLI validates citations after you finish.",
             f"End the final Markdown with `{FINAL_REPORT_SENTINEL}` on its own line.",
             "Return Markdown.",

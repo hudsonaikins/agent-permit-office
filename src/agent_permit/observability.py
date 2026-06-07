@@ -5,9 +5,11 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 import os
 from typing import Any
+from urllib.parse import urlparse
 
 
-DEFAULT_PHOENIX_ENDPOINT = "http://localhost:6006"
+DEFAULT_PHOENIX_BASE_URL = "http://localhost:6006"
+DEFAULT_PHOENIX_ENDPOINT = f"{DEFAULT_PHOENIX_BASE_URL}/v1/traces"
 DEFAULT_OBSERVABILITY_PROJECT = "agent-permit-office"
 EVIDENCE_TOOL_SPAN_NAME = "agent_permit.evidence_tool"
 
@@ -33,11 +35,13 @@ def configure_phoenix_tracing(
             "uv run --extra phoenix agent-permit investigate ..."
         ) from exc
 
-    resolved_endpoint = endpoint or os.environ.get(
-        "PHOENIX_COLLECTOR_ENDPOINT",
-        DEFAULT_PHOENIX_ENDPOINT,
+    resolved_endpoint = normalize_phoenix_collector_endpoint(
+        endpoint or os.environ.get(
+            "PHOENIX_COLLECTOR_ENDPOINT",
+            DEFAULT_PHOENIX_ENDPOINT,
+        )
     )
-    os.environ.setdefault("PHOENIX_COLLECTOR_ENDPOINT", resolved_endpoint)
+    os.environ["PHOENIX_COLLECTOR_ENDPOINT"] = resolved_endpoint
     os.environ.setdefault("PHOENIX_PROJECT_NAME", project_name)
     register(
         project_name=project_name,
@@ -49,6 +53,14 @@ def configure_phoenix_tracing(
         endpoint=resolved_endpoint,
         auto_instrument=auto_instrument,
     )
+
+
+def normalize_phoenix_collector_endpoint(endpoint: str) -> str:
+    normalized = endpoint.rstrip("/")
+    parsed = urlparse(normalized)
+    if parsed.path in {"", "/"}:
+        return f"{normalized}/v1/traces"
+    return normalized
 
 
 @contextmanager

@@ -96,10 +96,10 @@ Run Phoenix locally:
 uv run --extra phoenix python -m phoenix.server.main serve
 ```
 
-Phoenix listens locally by default:
+Phoenix trace export uses the local OTLP trace endpoint:
 
 ```bash
-export PHOENIX_COLLECTOR_ENDPOINT=http://localhost:6006
+export PHOENIX_COLLECTOR_ENDPOINT=http://localhost:6006/v1/traces
 ```
 
 Trace a live Deep Agent investigation:

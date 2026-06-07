@@ -67,6 +67,92 @@ The live path now has these guardrails:
 - `END_OF_REPORT` sentinel required for live reports
 - deterministic citation critic still gates final report success
 
+## Sprint 20 Phoenix Trace Validation
+
+Phoenix was already running locally at `http://localhost:6006`.
+
+Initial trace export used `PHOENIX_COLLECTOR_ENDPOINT=http://localhost:6006` and the live report passed, but span export returned repeated HTTP `405 Method Not Allowed` responses because the exporter posted to the Phoenix UI root instead of the OTLP trace endpoint.
+
+Fix:
+
+- normalize `http://localhost:6006` to `http://localhost:6006/v1/traces`
+- set `.env.example` to the `/v1/traces` endpoint
+- keep `PHOENIX_BASE_URL=http://localhost:6006` for dataset uploads
+
+Rerun result:
+
+```text
+Collector Endpoint: http://localhost:6006/v1/traces
+Status: investigation_complete
+Citation check: passed
+Phoenix tracing: requested
+```
+
+No `405` export errors were emitted after normalization.
+
+## Sprint 20 Real Repo Live Validation
+
+Real local repo:
+
+```text
+/tmp/agent-permit-validation/open_deep_research
+```
+
+Scan command:
+
+```bash
+uv run agent-permit scan /tmp/agent-permit-validation/open_deep_research \
+  --run-id sprint20-open-deep-research
+```
+
+Scan result:
+
+- files indexed: `42`
+- credential refs: `17`
+- CI findings: `4`
+- graph paths: `2`
+- controls: `6`
+- permit status: `needs_review`
+
+First live report completed but failed the citation critic because it mentioned `ci-secret-reference` and `ci-write-permission` without same-row `[rule:<rule_id>]` citations. It also included an unsupported calendar date. The prompt now explicitly requires:
+
+- every scanner rule ID mention has a same-paragraph or same-table-row `[rule:<rule_id>]` citation
+- no calendar dates unless the exact date exists in scan artifacts
+- no preamble before the report heading
+
+Successful rerun:
+
+```bash
+OPENROUTER_TIMEOUT_SECONDS=30 \
+OPENROUTER_MAX_COMPLETION_TOKENS=2400 \
+uv run --extra deep-agent agent-permit investigate \
+  /tmp/agent-permit-validation/open_deep_research/.agent-permit/runs/sprint20-open-deep-research \
+  --agent-recursion-limit 20
+```
+
+Result:
+
+- exit code: `0`
+- citation check: `passed`
+- report lines: `88`
+- permit status: `needs_review`
+- no `END_OF_REPORT` sentinel left in written report
+- no unsupported `2025` date
+
+Usage summary:
+
+```json
+{
+  "cache_hit_ratio": 0.5721,
+  "cache_write_tokens": 0,
+  "cached_tokens": 17213,
+  "input_tokens": 30090,
+  "model_calls": 3,
+  "output_tokens": 2250,
+  "total_tokens": 32340
+}
+```
+
 ## Next Validation
 
-Run the same live path with Phoenix enabled, then test one real local repo with Sonnet 4.6. Only use GPT-5.5 after Sonnet produces a citation failure or materially weaker report.
+Run one GPT-5.5 comparison only if Sonnet 4.6 fails a harder real-repo citation or report-quality check. Otherwise, next work should be productizing a live validation harness that records these run metrics without manual shell wrappers.

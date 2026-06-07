@@ -198,6 +198,10 @@ Sprint 19 live Deep Agent validation items:
 
 - `APO-57`: Validate live Deep Agent report path with Sonnet - done
 
+Sprint 20 Phoenix and real repo live validation items:
+
+- `APO-58`: Validate Phoenix trace export and real repo Deep Agent report - done
+
 ## Operating Rule
 
 Plane is now the execution tracker.

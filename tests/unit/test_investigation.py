@@ -122,6 +122,15 @@ def test_investigate_cli_skips_phoenix_for_deterministic_report(tmp_path) -> Non
     assert "Phoenix tracing: skipped in deterministic mode" in stdout.getvalue()
 
 
+def test_phoenix_collector_endpoint_normalizes_ui_base_url() -> None:
+    assert observability.normalize_phoenix_collector_endpoint(
+        "http://localhost:6006"
+    ) == "http://localhost:6006/v1/traces"
+    assert observability.normalize_phoenix_collector_endpoint(
+        "http://localhost:6006/v1/traces"
+    ) == "http://localhost:6006/v1/traces"
+
+
 def test_deep_agent_tools_and_subagents_are_artifact_bounded(tmp_path) -> None:
     artifact_dir = _scan_fixture(tmp_path, "risky-mcp-agent", "deep-agent-spec")
     context = EvidenceContext.load(artifact_dir)
@@ -131,6 +140,8 @@ def test_deep_agent_tools_and_subagents_are_artifact_bounded(tmp_path) -> None:
     tool_names = {tool.__name__ for tool in tools}
 
     assert "execute shell commands" in DEEP_AGENT_SYSTEM_PROMPT
+    assert "Every mention of a scanner rule ID" in DEEP_AGENT_SYSTEM_PROMPT
+    assert "Do not write preamble" in DEEP_AGENT_SYSTEM_PROMPT
     assert tool_names >= {
         "list_evidence_artifacts",
         "read_evidence_artifact",
