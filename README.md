@@ -19,6 +19,7 @@ Current implementation:
 - SARIF mode writes `results.sarif` for GitHub code scanning upload.
 - Baseline mode writes deterministic finding baselines and diffs so CI can fail only on newly introduced findings.
 - Policy mode reads `agent-permit-policy.json` or `--policy` and writes `policy-evaluation.json`.
+- Scan and live validation runs write sanitized `run-metrics.json` for local product/eval analytics.
 - Eval mode writes fixture regression and Phoenix dataset-row artifacts under `.agent-permit/evals/<run_id>/`.
 - Investigation mode uses a required bounded LangChain Deep Agent, defaulting to Claude Sonnet 4.6 through OpenRouter.
 - Live validation mode scans fresh, runs the Deep Agent, citation-checks the report, and writes `live-validation.json`.

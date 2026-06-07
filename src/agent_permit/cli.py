@@ -16,6 +16,12 @@ from agent_permit.artifacts import (
     RunArtifactWriter,
     create_run_id,
 )
+from agent_permit.analytics import (
+    RUN_METRICS_FILE,
+    build_live_validation_metrics,
+    build_scan_run_metrics,
+    write_run_metrics,
+)
 from agent_permit.baseline import (
     BASELINE_FILE,
     DIFF_JSON_FILE,
@@ -816,6 +822,20 @@ def run_scan(
         scan_run.status = ScanRunStatus.COMPLETED
         scan_run.completed_at = datetime.now(timezone.utc)
         artifact_writer.write_scan_run(scan_run)
+        write_run_metrics(
+            scan_run.artifact_dir / RUN_METRICS_FILE,
+            build_scan_run_metrics(
+                scan_run=scan_run,
+                target_path=target_path,
+                inventory=inventory,
+                agent_bom=mcp_result.agent_bom,
+                codebase_map=graph_result.codebase_map,
+                findings=graph_result.findings,
+                graph_paths=graph_path_report,
+                controls=permit_evaluation.controls,
+                permit=permit_evaluation.permit,
+            ),
+        )
     except OSError as exc:
         print(f"error: failed to create scan artifacts: {exc}", file=stderr)
         return 1
@@ -845,6 +865,7 @@ def run_scan(
     print(f"Controls: {len(permit_evaluation.controls.controls)}", file=stdout)
     print(f"Permit status: {permit_evaluation.permit.status}", file=stdout)
     print(f"Summary: {scan_run.artifact_dir / 'summary.md'}", file=stdout)
+    print(f"Metrics: {scan_run.artifact_dir / RUN_METRICS_FILE}", file=stdout)
     if policy_evaluation is not None:
         print(f"Policy: {resolved_policy_path}", file=stdout)
         print(f"Policy adjustments: {len(policy_evaluation.adjustments)}", file=stdout)
@@ -982,6 +1003,7 @@ def run_live_validate(
     stdout: TextIO,
     stderr: TextIO,
 ) -> int:
+    validation_started_at = datetime.now(timezone.utc)
     selected_model = model or DEFAULT_DEEP_AGENT_MODEL
     validation_run_id = run_id or create_run_id(target_path)
     artifact_dir = (
@@ -1058,6 +1080,7 @@ def run_live_validate(
     summary = context.summary()
     passed = investigation_exit_code == 0 and citation_check["supported"] is True
     usage_summary = _read_json_file_if_exists(usage_path)
+    validation_completed_at = datetime.now(timezone.utc)
     validation_payload = {
         "status": "passed" if passed else "failed",
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -1087,6 +1110,23 @@ def run_live_validate(
         validation_path.write_text(
             json.dumps(validation_payload, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
+        )
+        write_run_metrics(
+            artifact_dir / RUN_METRICS_FILE,
+            build_live_validation_metrics(
+                context=context,
+                target_path=target_path,
+                status=validation_payload["status"],
+                started_at=validation_started_at,
+                completed_at=validation_completed_at,
+                model=selected_model,
+                citation_check=citation_check,
+                usage_summary=usage_summary,
+                scan_exit_code=scan_exit_code,
+                investigation_exit_code=investigation_exit_code,
+                phoenix=enable_phoenix,
+                langsmith=enable_langsmith,
+            ),
         )
     except OSError as exc:
         print(f"error: failed to write live validation: {exc}", file=stderr)
@@ -1121,6 +1161,7 @@ def run_live_validate(
     if usage_path.is_file():
         print(f"OpenRouter usage: {usage_path}", file=stdout)
     print(f"Validation: {validation_path}", file=stdout)
+    print(f"Metrics: {artifact_dir / RUN_METRICS_FILE}", file=stdout)
     return 0 if passed else (investigation_exit_code or 1)
 
 

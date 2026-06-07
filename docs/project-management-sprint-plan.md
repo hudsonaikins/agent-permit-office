@@ -664,6 +664,23 @@ Backlog:
 | T3 live validation | Fixed live Deep Agent report is rerun. | Blocked: OpenRouter returned `402 Insufficient credits`. |
 | Analytics roadmap | Product analytics next layer is scoped. | Done: added `docs/product-analytics-evals-roadmap.md`. |
 
+## Sprint 29: Local Metrics Foundation
+
+Goal:
+
+- make every scan and live validation emit analytics-ready local metrics without hosted telemetry
+
+Backlog:
+
+| Item | Outcome | Acceptance criteria |
+| --- | --- | --- |
+| Run metrics model | Metrics have a stable schema. | Done: added `RunMetrics` with run type, sanitized target hash, status, counts, rule totals, citation status, model usage, cache, tracing, and duration fields. |
+| Scan metrics | Deterministic scans write product/eval metrics. | Done: `agent-permit scan` writes `.agent-permit/runs/<run_id>/run-metrics.json`. |
+| Live validation metrics | Deep Agent validation writes enriched metrics. | Done: `agent-permit live-validate` writes live-validation metrics with citation and OpenRouter usage fields. |
+| Privacy posture | Metrics do not need repo path, code, or secrets. | Done: target identity is a SHA-256 fingerprint from file paths and file hashes. |
+| Regression tests | Metrics shape is covered. | Done: CLI tests assert scan and live-validation metric payloads. |
+| Docs sync | Product analytics plan reflects shipped foundation. | Done: README and analytics roadmap mention `run-metrics.json`. |
+
 ## Release Criteria For MVP
 
 MVP is ready when:

@@ -234,6 +234,10 @@ Sprint 28 severity rollup and analytics planning items:
 
 - `APO-66`: Fix severity rollup consistency and aggregate report validation - validation blocked by OpenRouter credits
 
+Sprint 29 local metrics foundation items:
+
+- `APO-67`: Add local run metrics foundation - done
+
 ## Operating Rule
 
 Plane is now the execution tracker.

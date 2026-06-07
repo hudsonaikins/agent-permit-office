@@ -18,6 +18,7 @@ It does not yet have hosted product analytics because there is no hosted control
 | Deep Agent report | built | `agent-investigation.md` |
 | Citation critic | built | command exit, `live-validation.json` |
 | Aggregate severity validation | built | citation critic aggregate checks |
+| Run metrics | built | `run-metrics.json` |
 | OpenRouter usage | built | `openrouter-usage.json` |
 | Live validation | built | `live-validation.json` |
 | Fixture evals | built | `.agent-permit/evals/<run_id>/eval-results.json` |
@@ -60,13 +61,19 @@ Missing eval analytics:
 
 Write one normalized metrics artifact for every scan and live validation.
 
+Status: built in Sprint 29.
+
 Shape:
 
 ```json
 {
+  "version": 1,
   "run_id": "example",
+  "run_type": "live_validation",
   "target_hash": "repo-fingerprint",
+  "status": "passed",
   "permit_status": "blocked",
+  "files_indexed": 4989,
   "findings": 54,
   "finding_severity_counts": {
     "critical": 2,
@@ -78,7 +85,9 @@ Shape:
   "graph_paths": 6,
   "controls": 60,
   "credentials": 11,
-  "citation_check": "passed",
+  "mcp_servers": 0,
+  "citation_check_status": "passed",
+  "aggregate_mismatches": 0,
   "model": "openrouter:anthropic/claude-sonnet-4.6",
   "model_calls": 4,
   "total_tokens": 54336,
@@ -92,6 +101,7 @@ Reason:
 - single dashboard-ready payload
 - easier eval trend analysis
 - easier hosted ingestion later
+- sanitized target fingerprint instead of raw repo path
 
 ### 2. `analytics-events.jsonl`
 
@@ -167,7 +177,7 @@ Analytics should answer:
 Next analytics work should stay local-first:
 
 ```text
-run-metrics.json + analytics-events.jsonl + eval trend report
+analytics-events.jsonl + eval trend report + local dashboard
 ```
 
 Hosted product analytics comes later with the open-core control plane.

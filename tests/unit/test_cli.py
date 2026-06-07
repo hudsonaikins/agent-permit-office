@@ -77,6 +77,7 @@ jobs:
     summary_text = (artifact_dir / "summary.md").read_text()
     raw_findings_text = (artifact_dir / "raw-findings.json").read_text()
     raw_findings = json.loads(raw_findings_text)
+    run_metrics = json.loads((artifact_dir / "run-metrics.json").read_text())
     scan_run = json.loads((artifact_dir / "scan-run.json").read_text())
     files_by_path = {entry["path"]: entry for entry in inventory["files"]}
     assert files_by_path["AGENTS.md"]["kind"] == "agent_instruction"
@@ -125,6 +126,38 @@ jobs:
     assert "${GITHUB_TOKEN}" not in raw_findings_text
     assert "sk-live-placeholder" not in json.dumps(agent_bom)
     assert scan_run["status"] == "completed"
+    assert run_metrics["run_id"] == "test-run"
+    assert run_metrics["run_type"] == "scan"
+    assert run_metrics["target_hash"].startswith("sha256:")
+    assert run_metrics["status"] == "completed"
+    assert run_metrics["permit_status"] == "blocked"
+    assert run_metrics["files_indexed"] == 4
+    assert run_metrics["high_signal_files"] == 4
+    assert run_metrics["findings"] == 6
+    assert run_metrics["finding_severity_counts"] == {
+        "critical": 1,
+        "high": 4,
+        "info": 0,
+        "low": 0,
+        "medium": 1,
+    }
+    assert run_metrics["rule_counts"] == {
+        "ci-pr-target-write-token": 1,
+        "ci-pull-request-target": 1,
+        "ci-write-all-permissions": 1,
+        "mcp-stdio-credential-ref": 1,
+        "mcp-unpinned-package-command": 1,
+        "prompt-approval-bypass": 1,
+    }
+    assert run_metrics["graph_nodes"] == 9
+    assert run_metrics["graph_edges"] == 5
+    assert run_metrics["graph_paths"] == 3
+    assert run_metrics["controls"] == 8
+    assert run_metrics["credentials"] == 2
+    assert run_metrics["mcp_servers"] == 1
+    assert run_metrics["citation_check_status"] == "not_applicable"
+    assert run_metrics["model"] is None
+    assert run_metrics["model_calls"] == 0
     assert f"Artifacts: {artifact_dir}" in stdout.getvalue()
     assert "Files indexed: 4" in stdout.getvalue()
     assert "High signal files: 4" in stdout.getvalue()
@@ -139,6 +172,7 @@ jobs:
     assert "Controls: 8" in stdout.getvalue()
     assert "Permit status: blocked" in stdout.getvalue()
     assert f"Summary: {artifact_dir / 'summary.md'}" in stdout.getvalue()
+    assert f"Metrics: {artifact_dir / 'run-metrics.json'}" in stdout.getvalue()
 
 
 def test_live_validate_scans_and_writes_validation_summary(tmp_path, monkeypatch) -> None:
@@ -209,6 +243,7 @@ jobs:
 
     artifact_dir = tmp_path / ".agent-permit" / "runs" / "live-test"
     validation = json.loads(output_path.read_text())
+    run_metrics = json.loads((artifact_dir / "run-metrics.json").read_text())
     assert exit_code == 0
     assert stderr.getvalue() == ""
     assert captured["model"] == "openrouter:test/model"
@@ -226,8 +261,24 @@ jobs:
     assert validation["usage_summary"]["cached_tokens"] == 10
     assert validation["phoenix"] is True
     assert validation["agent_recursion_limit"] == 9
+    assert run_metrics["run_id"] == "live-test"
+    assert run_metrics["run_type"] == "live_validation"
+    assert run_metrics["status"] == "passed"
+    assert run_metrics["permit_status"] == "blocked"
+    assert run_metrics["citation_check_status"] == "passed"
+    assert run_metrics["citation_supported"] is True
+    assert run_metrics["aggregate_mismatches"] == 0
+    assert run_metrics["model"] == "openrouter:test/model"
+    assert run_metrics["model_calls"] == 1
+    assert run_metrics["total_tokens"] == 20
+    assert run_metrics["cached_tokens"] == 10
+    assert run_metrics["cache_hit_ratio"] == 0.5
+    assert run_metrics["scan_exit_code"] == 0
+    assert run_metrics["investigation_exit_code"] == 0
+    assert run_metrics["phoenix"] is True
     assert "Status: live_validation_complete" in stdout.getvalue()
     assert f"Validation: {output_path}" in stdout.getvalue()
+    assert f"Metrics: {artifact_dir / 'run-metrics.json'}" in stdout.getvalue()
 
 
 def test_scan_command_rejects_missing_path(tmp_path) -> None:
