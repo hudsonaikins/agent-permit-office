@@ -378,25 +378,23 @@
 .apo-empty-panel {
   min-width: 0;
   overflow: hidden;
+  border: 1px solid var(--apo-border);
   border-radius: 8px;
+  background: var(--apo-surface);
+  padding: 0;
   box-shadow: none;
 }
 
-.apo-panel-header {
-  min-height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.apo-table-pinned {
+  padding: 16px;
   border-bottom: 1px solid var(--apo-border);
-  border-radius: 8px 8px 0 0;
 }
 
-.apo-panel-subtitle {
-  margin-top: 2px;
+.apo-table-pinned p {
+  margin: 8px 0 0;
   color: var(--apo-text-muted);
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 13px;
+  line-height: 20px;
 }
 
 .apo-table-content {

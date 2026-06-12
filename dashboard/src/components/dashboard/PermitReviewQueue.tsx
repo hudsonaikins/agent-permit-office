@@ -24,7 +24,7 @@ import {
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -386,17 +386,18 @@ function FindingsTable({
 }) {
   return (
     <Card className="apo-table-panel">
-      <CardHeader className="apo-panel-header">
-        <div>
-          <CardTitle>Findings spreadsheet</CardTitle>
-          <div className="apo-panel-subtitle">
-            {rows.length} deterministic scanner findings. Select a row to inspect evidence.
-          </div>
+      <div className="apo-table-pinned">
+        <div className="apo-detail-kicker">Findings spreadsheet</div>
+        <div className="apo-detail-title-row">
+          <h2>Review queue</h2>
+          <Button variant="ghost" size="sm">
+            Sort by risk
+          </Button>
         </div>
-        <Button variant="ghost" size="sm">
-          Sort by risk
-        </Button>
-      </CardHeader>
+        <p>
+          {rows.length} deterministic scanner findings. Select a row to inspect evidence.
+        </p>
+      </div>
       <CardContent className="apo-table-content">
         <div className="apo-table-scroll">
           <Table>
