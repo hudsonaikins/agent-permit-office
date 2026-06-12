@@ -2,17 +2,11 @@ import { useMemo, useState } from "react"
 import {
   ArchiveBoxIcon,
   ArrowSquareOutIcon,
-  ChartLineIcon,
   CheckCircleIcon,
-  ClockCounterClockwiseIcon,
-  CopyIcon,
   DatabaseIcon,
   DownloadSimpleIcon,
   FileSearchIcon,
   FlowArrowIcon,
-  FunnelIcon,
-  GearSixIcon,
-  GitBranchIcon,
   LockKeyIcon,
   MagnifyingGlassIcon,
   PulseIcon,
@@ -45,11 +39,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import {
   agentTraceSteps,
@@ -62,16 +51,6 @@ import {
   type Severity,
   type TraceState,
 } from "@/data/permitQueue"
-
-const navItems = [
-  { label: "Runs", icon: ClockCounterClockwiseIcon, count: "42" },
-  { label: "Repositories", icon: GitBranchIcon, count: "9" },
-  { label: "Findings", icon: FileSearchIcon, count: "36", active: true },
-  { label: "Agent Trace", icon: RobotIcon, count: "14" },
-  { label: "Evals", icon: ChartLineIcon, count: "8" },
-  { label: "Artifacts", icon: DatabaseIcon, count: "21" },
-  { label: "Settings", icon: GearSixIcon },
-]
 
 const statusLabels: Record<PermitStatus, string> = {
   approved: "Approved",
@@ -149,19 +128,18 @@ function AppSidebar() {
         </div>
       </div>
 
-      <nav className="apo-nav" aria-label="Primary">
-        {navItems.map((item) => (
-          <button
-            className={cn("apo-nav-item", item.active && "is-active")}
-            key={item.label}
-            type="button"
-          >
-            <item.icon weight={item.active ? "fill" : "regular"} />
-            <span>{item.label}</span>
-            {item.count ? <span className="apo-nav-count">{item.count}</span> : null}
-          </button>
-        ))}
-      </nav>
+      <div className="apo-sidebar-panel" aria-label="Current dashboard context">
+        <div className="apo-sidebar-kicker">Current surface</div>
+        <div className="apo-sidebar-title">
+          <FileSearchIcon weight="fill" />
+          <span>Findings queue</span>
+        </div>
+        <p>Review scanner findings, agent evidence, and permit decisions for one run.</p>
+        <div className="apo-sidebar-stats">
+          <span>36 findings</span>
+          <span>14 trace steps</span>
+        </div>
+      </div>
     </aside>
   )
 }
@@ -179,14 +157,6 @@ function DashboardHeader() {
       </div>
 
       <div className="apo-header-actions">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="outline" size="icon-sm" aria-label="Copy run ID">
-              <CopyIcon />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Copy run ID</TooltipContent>
-        </Tooltip>
         <Button variant="outline">
           <ArchiveBoxIcon data-icon="inline-start" />
           Artifacts
@@ -246,17 +216,13 @@ function SavedViews({
 
 function FilterBar({
   search,
-  status,
   severity,
   onSearchChange,
-  onStatusChange,
   onSeverityChange,
 }: {
   search: string
-  status: string
   severity: string
   onSearchChange: (value: string) => void
-  onStatusChange: (value: string) => void
   onSeverityChange: (value: string) => void
 }) {
   return (
@@ -270,20 +236,6 @@ function FilterBar({
           value={search}
         />
       </div>
-
-      <Select onValueChange={onStatusChange} value={status}>
-        <SelectTrigger className="apo-select-trigger">
-          <SelectValue placeholder="Status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">All status</SelectItem>
-            <SelectItem value="blocked">Blocked</SelectItem>
-            <SelectItem value="needs-review">Needs review</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-          </SelectGroup>
-        </SelectContent>
-      </Select>
 
       <Select onValueChange={onSeverityChange} value={severity}>
         <SelectTrigger className="apo-select-trigger">
@@ -299,11 +251,6 @@ function FilterBar({
           </SelectGroup>
         </SelectContent>
       </Select>
-
-      <Button variant="outline">
-        <FunnelIcon data-icon="inline-start" />
-        More filters
-      </Button>
     </section>
   )
 }
@@ -390,9 +337,7 @@ function FindingsTable({
         <div className="apo-detail-kicker">Findings spreadsheet</div>
         <div className="apo-detail-title-row">
           <h2>Review queue</h2>
-          <Button variant="ghost" size="sm">
-            Sort by risk
-          </Button>
+          <span className="apo-sort-label">Sorted by risk</span>
         </div>
         <p>
           {rows.length} deterministic scanner findings. Select a row to inspect evidence.
@@ -598,7 +543,7 @@ function EmptyState() {
         <ShieldCheckIcon weight="duotone" />
         <div>
           <h2>No findings match filters</h2>
-          <p>Widen status, severity, or search filters to restore queue rows.</p>
+          <p>Widen severity or search filters to restore queue rows.</p>
         </div>
       </CardContent>
     </Card>
@@ -609,14 +554,12 @@ export function PermitReviewQueue() {
   const [activeView, setActiveView] = useState("needs-review")
   const [selectedId, setSelectedId] = useState(queueFindings[0].id)
   const [search, setSearch] = useState("")
-  const [status, setStatus] = useState("all")
   const [severity, setSeverity] = useState("all")
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
 
     return queueFindings.filter((row) => {
-      const matchesStatus = status === "all" || row.status === status
       const matchesSeverity = severity === "all" || row.severity === severity
       const matchesSearch =
         normalizedSearch.length === 0 ||
@@ -625,9 +568,9 @@ export function PermitReviewQueue() {
           .toLowerCase()
           .includes(normalizedSearch)
 
-      return matchesStatus && matchesSeverity && matchesSearch
+      return matchesSeverity && matchesSearch
     })
-  }, [search, severity, status])
+  }, [search, severity])
 
   const selectedFinding =
     filteredRows.find((row) => row.id === selectedId) ?? filteredRows[0] ?? queueFindings[0]
@@ -659,10 +602,8 @@ export function PermitReviewQueue() {
                 <FilterBar
                   onSearchChange={setSearch}
                   onSeverityChange={setSeverity}
-                  onStatusChange={setStatus}
                   search={search}
                   severity={severity}
-                  status={status}
                 />
               </div>
             </div>
