@@ -43,9 +43,9 @@
   color: var(--apo-primary);
 }
 
-.apo-brand-mark svg {
-  width: 19px;
-  height: 19px;
+.apo-brand-logo {
+  width: 22px;
+  height: 22px;
 }
 
 .apo-brand-title {
@@ -830,6 +830,112 @@
   margin-top: 12px;
 }
 
+.apo-decision-log {
+  margin: 10px 10px 0;
+  border: 1px solid var(--apo-border);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--apo-surface);
+}
+
+.apo-decision-log-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.apo-decision-log-heading > span {
+  color: var(--apo-text-faint);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.apo-decision-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.apo-decision-log-list li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) minmax(76px, auto);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.apo-log-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--apo-muted);
+}
+
+.apo-log-dot.is-approved {
+  background: var(--apo-approved);
+}
+
+.apo-log-dot.is-needs-review {
+  background: var(--apo-review);
+}
+
+.apo-log-dot.is-blocked {
+  background: var(--apo-blocked);
+}
+
+.apo-log-dot.is-agent {
+  background: var(--apo-agent);
+}
+
+.apo-log-main {
+  min-width: 0;
+}
+
+.apo-log-line {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--apo-text);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.apo-log-line strong {
+  flex: 0 0 auto;
+  font-weight: 700;
+}
+
+.apo-log-line span,
+.apo-log-main p,
+.apo-decision-log-list code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apo-log-main p {
+  margin: 1px 0 0;
+  color: var(--apo-text-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.apo-decision-log-list code {
+  color: var(--apo-text-muted);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: right;
+}
+
 .apo-detail-tabs {
   min-height: 0;
   flex: 1;
@@ -1270,6 +1376,15 @@
   .apo-detail-title-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .apo-decision-log-list li {
+    grid-template-columns: 10px minmax(0, 1fr);
+  }
+
+  .apo-decision-log-list code {
+    grid-column: 2;
+    text-align: left;
   }
 
   .apo-table-scroll {

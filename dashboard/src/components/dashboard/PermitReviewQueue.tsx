@@ -245,6 +245,114 @@ function TraceBadge({ state }: { state: TraceState }) {
   )
 }
 
+type DecisionLogTone = PermitStatus | "agent"
+
+type DecisionLogEntry = {
+  action: string
+  actor: string
+  detail: string
+  ref: string
+  tone: DecisionLogTone
+}
+
+function decisionLogEntries(finding: QueueFinding): DecisionLogEntry[] {
+  const permitAction =
+    finding.status === "approved"
+      ? "Permit approved"
+      : finding.status === "blocked"
+        ? "Permit blocked"
+        : "Needs review"
+
+  return [
+    {
+      action: `Flagged ${finding.rule}`,
+      actor: "Scanner",
+      detail: finding.evidence,
+      ref: evidenceLocation(finding),
+      tone: finding.status,
+    },
+    {
+      action: "Verified evidence",
+      actor: "Deep Agent",
+      detail: `${finding.metrics.graphPaths} graph paths, ${finding.metrics.controls} controls, ${finding.confidence}% confidence.`,
+      ref: finding.artifacts[0] ? artifactLabel(finding.artifacts[0]) : finding.scanner,
+      tone: "agent",
+    },
+    {
+      action: permitAction,
+      actor: "System",
+      detail: finding.remediation,
+      ref: statusLabels[finding.status],
+      tone: finding.status,
+    },
+  ]
+}
+
+function PermitGraphMark() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="apo-brand-logo"
+      fill="none"
+      viewBox="0 0 28 28"
+    >
+      <path
+        d="M9 5.75H19C20.24 5.75 21.25 6.76 21.25 8V20C21.25 21.24 20.24 22.25 19 22.25H9C7.76 22.25 6.75 21.24 6.75 20V8C6.75 6.76 7.76 5.75 9 5.75Z"
+        opacity="0.38"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M14 6.75V21.25"
+        opacity="0.42"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M8.8 18.2H11.3C12.74 18.2 13.9 17.04 13.9 15.6V12.4C13.9 10.96 15.06 9.8 16.5 9.8H19.2"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <circle cx="8.8" cy="18.2" r="2.2" fill="currentColor" />
+      <circle cx="19.2" cy="9.8" r="2.2" fill="currentColor" />
+    </svg>
+  )
+}
+
+function DecisionLog({ finding }: { finding: QueueFinding }) {
+  const entries = decisionLogEntries(finding)
+
+  return (
+    <section className="apo-decision-log" aria-label="Decision log">
+      <div className="apo-decision-log-heading">
+        <div className="apo-section-heading">
+          <FlowArrowIcon />
+          Decision Log
+        </div>
+        <span>{entries.length} steps</span>
+      </div>
+      <ol className="apo-decision-log-list">
+        {entries.map((entry) => (
+          <li key={`${entry.actor}-${entry.action}`}>
+            <span className={cn("apo-log-dot", `is-${entry.tone}`)} />
+            <div className="apo-log-main">
+              <div className="apo-log-line">
+                <strong>{entry.actor}</strong>
+                <span>{entry.action}</span>
+              </div>
+              <p>{entry.detail}</p>
+            </div>
+            <code>{entry.ref}</code>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
 function AppSidebar({ summary }: { summary: QueueSummary }) {
   const verdict = verdictCopy(summary)
 
@@ -252,11 +360,11 @@ function AppSidebar({ summary }: { summary: QueueSummary }) {
     <aside className="apo-sidebar" aria-label="Dashboard navigation">
       <div className="apo-brand">
         <div className="apo-brand-mark">
-          <ShieldCheckIcon weight="fill" />
+          <PermitGraphMark />
         </div>
         <div>
-          <div className="apo-brand-title">Agent Permit</div>
-          <div className="apo-brand-subtitle">Office</div>
+          <div className="apo-brand-title">PermitGraph</div>
+          <div className="apo-brand-subtitle">Agent risk gate</div>
         </div>
       </div>
 
@@ -631,6 +739,8 @@ function DetailRail({
         </div>
       </div>
 
+      <DecisionLog finding={finding} />
+
       <Tabs defaultValue="evidence" className="apo-detail-tabs">
         <TabsList className="apo-detail-tab-list">
           <TabsTrigger value="evidence">Evidence</TabsTrigger>
@@ -889,7 +999,7 @@ export function PermitReviewQueue() {
           theme={theme}
         />
         <div className="apo-workspace">
-          <section className="apo-dashboard-stack" aria-label="Permit findings">
+          <section className="apo-dashboard-stack" aria-label="Agent risk review">
             <RunStatusStrip summary={queueSummary} />
 
             <FindingsTable

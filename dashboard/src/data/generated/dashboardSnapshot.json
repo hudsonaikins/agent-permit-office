@@ -1,7 +1,7 @@
 {
   "artifactPreviews": {
     ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md": {
-      "content": "# Agent Permit Office Live Repo Validation Report\n\nValidation run: `sprint23-open-source-live`\nStatus: `passed`\nRepos: `5/5`\nManifest: `/Users/hudson/Documents/GitHub/agent-permit-office/docs/evals/open-source-live-repos.json`\nTotal tokens: `218401`\nCached tokens: `140970`\nCache hit ratio: `67.21%`\n\n## Repos\n\n| Repo | Status | Permit | Findings | Paths | Controls | Citations | Expectations | Tokens | Cached |\n| --- | --- | --- | ---: | ---: | ---: | --- | --- | ---: | ---: |\n| open-swe | pass | needs_review | 2 | 2 | 4 | pass | pass | 40461 | 26933 |\n| github-mcp-server | pass | needs_review | 22 | 9 | 31 | pass | pass | 47018 | 29337 |\n| mcp-use | pass | blocked | 84 | 22 | 105 | pass | pass | 67062 | 42582 |\n| lightagent | pass | approved | 0 | 0 | 0 | pass | pass | 36930 | 25496 |\n| open-multi-agent-canvas | pass | approved | 0 | 0 | 0 | pass | pass | 26930 | 16622 |\n\n## Failures\n\nNo failures.\n",
+      "content": "# PermitGraph Live Repo Validation Report\n\nValidation run: `sprint23-open-source-live`\nStatus: `passed`\nRepos: `5/5`\nManifest: `/Users/hudson/Documents/GitHub/agent-permit-office/docs/evals/open-source-live-repos.json`\nTotal tokens: `218401`\nCached tokens: `140970`\nCache hit ratio: `67.21%`\n\n## Repos\n\n| Repo | Status | Permit | Findings | Paths | Controls | Citations | Expectations | Tokens | Cached |\n| --- | --- | --- | ---: | ---: | ---: | --- | --- | ---: | ---: |\n| open-swe | pass | needs_review | 2 | 2 | 4 | pass | pass | 40461 | 26933 |\n| github-mcp-server | pass | needs_review | 22 | 9 | 31 | pass | pass | 47018 | 29337 |\n| mcp-use | pass | blocked | 84 | 22 | 105 | pass | pass | 67062 | 42582 |\n| lightagent | pass | approved | 0 | 0 | 0 | pass | pass | 36930 | 25496 |\n| open-multi-agent-canvas | pass | approved | 0 | 0 | 0 | pass | pass | 26930 | 16622 |\n\n## Failures\n\nNo failures.\n",
       "kind": "markdown",
       "label": "live-repo-validation-report.md",
       "path": ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
@@ -294,7 +294,7 @@
     "completedAt": "2026-06-07T04:30:32.144335+00:00",
     "repo": "open-source validation suite",
     "runId": "sprint23-open-source-live",
-    "title": "Permit Review Queue"
+    "title": "Agent Risk Review"
   },
   "savedViews": [
     {
