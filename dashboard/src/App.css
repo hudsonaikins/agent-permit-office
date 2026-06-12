@@ -123,15 +123,15 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  min-height: 86px;
+  min-height: 76px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 16px;
-  padding: 24px 16px 12px;
+  gap: 12px;
+  padding: 18px 16px 10px;
   border-bottom: 1px solid var(--apo-border);
-  background: color-mix(in srgb, var(--apo-surface) 86%, var(--apo-primary-soft));
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--apo-border-strong) 22%, transparent);
+  background: color-mix(in srgb, var(--apo-surface) 92%, var(--apo-primary-soft));
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--apo-border-strong) 14%, transparent);
 }
 
 .apo-header-title {
@@ -140,8 +140,8 @@
 
 .apo-header h1 {
   margin: 0;
-  font-size: 24px;
-  line-height: 30px;
+  font-size: 22px;
+  line-height: 28px;
   font-weight: 650;
 }
 
@@ -172,23 +172,28 @@
 .apo-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   padding-bottom: 2px;
+}
+
+.apo-theme-toggle svg {
+  width: 17px;
+  height: 17px;
 }
 
 .apo-workspace {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 14px;
 }
 
 .apo-dashboard-stack {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .apo-section-group {
@@ -232,21 +237,21 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .apo-saved-views {
   display: flex;
   gap: 6px;
   overflow-x: auto;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid var(--apo-border);
   border-radius: 8px;
   background: var(--apo-surface);
 }
 
 .apo-saved-view {
-  min-height: 36px;
+  min-height: 32px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -284,7 +289,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid var(--apo-border);
   border-radius: 8px;
   background: var(--apo-surface);
@@ -313,31 +318,31 @@
 .apo-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .apo-metric-tile {
-  min-height: 72px;
+  min-height: 60px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  padding: 10px;
   border: 1px solid var(--apo-border);
   border-radius: 8px;
   background: var(--apo-surface);
 }
 
 .apo-metric-icon {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   display: grid;
   place-items: center;
   border-radius: 8px;
 }
 
 .apo-metric-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .apo-metric-tile.is-review .apo-metric-icon {
@@ -361,8 +366,8 @@
 }
 
 .apo-metric-value {
-  font-size: 18px;
-  line-height: 24px;
+  font-size: 17px;
+  line-height: 22px;
   font-weight: 650;
 }
 
@@ -391,12 +396,12 @@
 }
 
 .apo-table-pinned {
-  padding: 16px;
+  padding: 12px;
   border-bottom: 1px solid var(--apo-border);
 }
 
 .apo-table-pinned p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: var(--apo-text-muted);
   font-size: 13px;
   line-height: 20px;
@@ -437,11 +442,16 @@
 }
 
 .apo-table-scroll th {
-  height: 38px;
+  height: 34px;
+  padding: 0 8px;
   color: var(--apo-text-muted);
   font-size: 11px;
   line-height: 16px;
   font-weight: 650;
+}
+
+.apo-table-scroll td {
+  padding: 5px 8px;
 }
 
 .apo-table-scroll th:nth-child(1),
@@ -485,18 +495,18 @@
 }
 
 .apo-finding-row {
-  height: 48px;
+  height: 44px;
   cursor: pointer;
 }
 
 .apo-finding-row:focus-visible {
-  outline: 2px solid var(--apo-primary);
-  outline-offset: -2px;
+  outline: 1px solid color-mix(in srgb, var(--apo-primary) 62%, var(--apo-border));
+  outline-offset: -1px;
 }
 
 .apo-finding-row[data-state="selected"] {
-  background: var(--apo-primary-soft);
-  box-shadow: inset 3px 0 0 var(--apo-primary);
+  background: color-mix(in srgb, var(--apo-primary-soft) 58%, var(--apo-surface));
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--apo-primary) 72%, var(--apo-border));
 }
 
 .apo-finding-main-cell {
@@ -609,7 +619,7 @@
 }
 
 .apo-detail-pinned {
-  padding: 16px;
+  padding: 12px;
   border-bottom: 1px solid var(--apo-border);
 }
 
@@ -631,8 +641,8 @@
 
 .apo-detail-title-row h2 {
   margin: 0;
-  font-size: 18px;
-  line-height: 24px;
+  font-size: 17px;
+  line-height: 23px;
   font-weight: 650;
 }
 
@@ -640,7 +650,7 @@
 .apo-detail-section p,
 .apo-trace-step p,
 .apo-policy-control p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: var(--apo-text-muted);
   font-size: 13px;
   line-height: 20px;
@@ -648,14 +658,14 @@
 
 .apo-decision-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 14px;
+  gap: 6px;
+  margin-top: 12px;
 }
 
 .apo-detail-tabs {
   min-height: 0;
   flex: 1;
-  padding: 12px;
+  padding: 10px;
 }
 
 .apo-detail-tab-list {
@@ -664,20 +674,20 @@
 
 .apo-detail-scroll {
   height: calc(100% - 42px);
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .apo-detail-section-stack {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding-right: 4px;
 }
 
 .apo-detail-section,
 .apo-trace-step,
 .apo-policy-control {
-  padding: 12px;
+  padding: 10px;
   border: 1px solid var(--apo-border);
   border-radius: 8px;
   background: var(--apo-surface);

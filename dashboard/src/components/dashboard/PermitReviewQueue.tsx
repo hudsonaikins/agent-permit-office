@@ -9,9 +9,11 @@ import {
   FlowArrowIcon,
   LockKeyIcon,
   MagnifyingGlassIcon,
+  MoonIcon,
   PulseIcon,
   RobotIcon,
   ShieldCheckIcon,
+  SunIcon,
   WarningDiamondIcon,
   XCircleIcon,
 } from "@phosphor-icons/react"
@@ -144,7 +146,33 @@ function AppSidebar() {
   )
 }
 
-function DashboardHeader() {
+function ThemeToggle({
+  theme,
+  onChange,
+}: {
+  theme: "light" | "dark"
+  onChange: () => void
+}) {
+  return (
+    <Button
+      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      className="apo-theme-toggle"
+      onClick={onChange}
+      size="icon-sm"
+      variant="outline"
+    >
+      {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+    </Button>
+  )
+}
+
+function DashboardHeader({
+  theme,
+  onThemeChange,
+}: {
+  theme: "light" | "dark"
+  onThemeChange: () => void
+}) {
   return (
     <header className="apo-header">
       <div className="apo-header-title">
@@ -157,6 +185,7 @@ function DashboardHeader() {
       </div>
 
       <div className="apo-header-actions">
+        <ThemeToggle onChange={onThemeChange} theme={theme} />
         <Button variant="outline">
           <ArchiveBoxIcon data-icon="inline-start" />
           Artifacts
@@ -555,6 +584,7 @@ export function PermitReviewQueue() {
   const [selectedId, setSelectedId] = useState(queueFindings[0].id)
   const [search, setSearch] = useState("")
   const [severity, setSeverity] = useState("all")
+  const [theme, setTheme] = useState<"light" | "dark">("light")
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
@@ -576,10 +606,13 @@ export function PermitReviewQueue() {
     filteredRows.find((row) => row.id === selectedId) ?? filteredRows[0] ?? queueFindings[0]
 
   return (
-    <div className="apo-dashboard">
+    <div className={cn("apo-dashboard", theme === "dark" && "dark")}>
       <AppSidebar />
       <main className="apo-main">
-        <DashboardHeader />
+        <DashboardHeader
+          onThemeChange={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+          theme={theme}
+        />
         <div className="apo-workspace">
           <section className="apo-dashboard-stack" aria-label="Permit findings">
             <div className="apo-section-group">
