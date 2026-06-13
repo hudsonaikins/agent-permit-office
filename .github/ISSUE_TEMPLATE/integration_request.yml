@@ -1,0 +1,54 @@
+name: Integration request
+description: Request support for a framework, scanner input, CI provider, or artifact consumer.
+title: "Integration request: "
+labels:
+  - integration
+body:
+  - type: input
+    id: integration
+    attributes:
+      label: Integration target
+      placeholder: LangGraph, CrewAI, GitLab CI, Buildkite, MCP server config, SARIF consumer...
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Workflow
+      description: Where would Agent Permit Office run, and who reviews the output?
+      placeholder: Run on pull_request before agent deployment; AppSec reviews blocked findings...
+    validations:
+      required: true
+  - type: textarea
+    id: artifacts
+    attributes:
+      label: Desired artifacts
+      description: What output should the integration produce or consume?
+      placeholder: SARIF upload, PR summary, policy exceptions, dashboard snapshot, proof pack...
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sanitized sample
+      description: Include public docs or sanitized config examples. Do not include secrets or private repo data.
+      render: markdown
+    validations:
+      required: false
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Need
+      options:
+        - evaluating
+        - active proof of concept
+        - production blocker
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed secrets, private code, private traces, and customer data from this request.
+          required: true

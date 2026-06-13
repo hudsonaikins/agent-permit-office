@@ -18,6 +18,19 @@ docs/demo-artifacts/open-source-demo-results.json
 
 This folder does not exist yet. Add it only after choosing the exact report to publish.
 
+## Sprint 35 Release Candidate Policy
+
+The release candidate does not commit demo artifacts yet.
+
+Reason:
+
+- current old proof packs can be partial when they reference temp repo checkout paths that no longer exist
+- a public artifact needs a fresh no-spend or live validation run
+- live validation needs OpenRouter credits/API access and explicit spend approval
+- committed reports must be manually scrubbed after generation
+
+Until then, publish the command path and scrub policy, not generated evidence.
+
 ## Why
 
 Generated scan artifacts can include:

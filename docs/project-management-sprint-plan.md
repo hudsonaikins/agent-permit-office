@@ -785,11 +785,73 @@ Design research:
 - `APO-75`: Build Permit Review Queue dashboard screen
 - design update: first usable dashboard screen now includes sidebar/header, saved views, filters, metrics, findings table, selected-detail rail, responsive layout, and local mock artifact data.
 
+## Sprint 33: PermitGraph Real Run Review
+
+Status: done.
+
+Goal:
+
+- make the local dashboard review real `.agent-permit` run artifacts instead of only mock data
+
+Delivered:
+
+- stable dashboard snapshot contract
+- run/repo selector behavior
+- evidence review panel
+- Decision Log view
+- proof pack export
+- blocked live T3 rerun proof tracked as APO-66
+
+## Sprint 34: Open Core Packaging
+
+Status: done.
+
+Goal:
+
+- package the repo for public OSS/open-core readiness without publishing remotely
+
+Delivered:
+
+- public README positioning
+- dashboard demo walkthrough
+- hosted open-core packaging plan
+- customer discovery kit
+- release hygiene audit
+- live proof rerun plan
+
+Proof:
+
+- `uv run pytest`: 119 passed
+- self-scan approved with fixture exclusions
+- dashboard lint/build passed
+- `uv build` passed after sdist excludes
+
+## Sprint 35: Public Release Candidate
+
+Status: in progress.
+
+Goal:
+
+- create a local public release candidate that can be verified, reviewed, and later pushed only after explicit approval
+
+Plane cycle:
+
+- `Sprint 35 - Public Release Candidate`
+
+Backlog:
+
+| Item | Outcome | Acceptance criteria |
+| --- | --- | --- |
+| Public release checklist and docs index cleanup | Repo is navigable as a public RC. | README links highest-value docs; readiness checklist current; Sprint 35 recorded. |
+| GitHub issue and PR templates | Public intake is ready. | Bug, false-positive, rule-request, integration-request, and PR templates exist; templates forbid secrets/private data. |
+| Release verification script | RC checks are repeatable. | `python3 tools/release_check.py` runs local link checks, tests, self-scan, package build, dashboard lint, and dashboard build. |
+| Demo artifact policy | Public artifact boundary is clear. | Docs state no generated `.agent-permit/` commit; scrubbed sample shape and proof-pack limitation are explicit. |
+| Local release tag plan | Release mechanics are ready but gated. | Proposed `v0.1.0` tag and remote-push steps are documented and require explicit approval. |
+
 ## Immediate Next Step
 
-Run Sprint 32 local dashboard:
+Run Sprint 35 local release verification:
 
 ```text
-cd dashboard
-bun dev
+python3 tools/release_check.py
 ```

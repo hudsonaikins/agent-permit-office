@@ -1,0 +1,58 @@
+name: False positive
+description: Report a finding that is too noisy, wrong, or missing context.
+title: "False positive: "
+labels:
+  - false-positive
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when Agent Permit Office flagged a risky path or rule that should not block review. Do not paste secrets or private code.
+  - type: input
+    id: rule
+    attributes:
+      label: Rule ID
+      placeholder: MCP-004, PROMPT-002, CI-009, AGENT-007
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Reported severity
+      options:
+        - critical
+        - high
+        - medium
+        - low
+        - info
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it is false positive
+      description: Explain the missing trust boundary, safe guardrail, or context the scanner failed to model.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence
+      description: Include line-cited finding snippets, policy config, or fixture-like examples only after redaction.
+      render: markdown
+    validations:
+      required: false
+  - type: textarea
+    id: desired
+    attributes:
+      label: Desired scanner behavior
+      placeholder: Downgrade to low when..., suppress when policy declares..., keep finding but change remediation...
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed secrets, private code, private traces, and customer data from this report.
+          required: true

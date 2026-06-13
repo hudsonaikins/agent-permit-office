@@ -1,0 +1,56 @@
+name: Rule request
+description: Propose a new deterministic scanner rule or graph path.
+title: "Rule request: "
+labels:
+  - rule-request
+body:
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk pattern
+      description: What agent, MCP, CI, credential, prompt, or repo-access behavior should be detected?
+      placeholder: An MCP server can read repository files and send content to an external network sink...
+    validations:
+      required: true
+  - type: textarea
+    id: source_sink
+    attributes:
+      label: Source-to-sink shape
+      description: Name the source, sink, trust boundary, and any safe barriers.
+      placeholder: Source = repo files; sink = external HTTP tool; barrier = allowlisted domain policy.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Example evidence
+      description: Provide sanitized config snippets or fixture shape. Do not paste secrets or private code.
+      render: markdown
+    validations:
+      required: false
+  - type: dropdown
+    id: suggested_severity
+    attributes:
+      label: Suggested severity
+      options:
+        - critical
+        - high
+        - medium
+        - low
+        - info
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: The rule should emit file/line evidence, redact env values, and include a risky fixture.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed secrets, private code, private traces, and customer data from this request.
+          required: true

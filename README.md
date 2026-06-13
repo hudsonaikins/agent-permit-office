@@ -63,6 +63,12 @@ bun dev
 
 Then open the localhost URL printed by Vite.
 
+Run the local public-release check:
+
+```bash
+python3 tools/release_check.py
+```
+
 ## Deep Agent Investigation
 
 Deep Agent investigation is part of the product path, not a side demo. The deterministic scanner creates bounded evidence. The Deep Agent reads that evidence, reasons across related artifacts, writes a cited report, and the citation critic checks whether claims are grounded.
@@ -188,6 +194,7 @@ Product and business:
 - [Open Core Business Plan](docs/open-core-business-plan.md)
 - [Customer Discovery Kit](docs/customer-discovery-kit.md)
 - [Open Source Release Readiness](docs/open-source-release-readiness.md)
+- [Release Candidate Plan](docs/release-candidate-plan.md)
 - [Project Management and Sprint Plan](docs/project-management-sprint-plan.md)
 
 Architecture:

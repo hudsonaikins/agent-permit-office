@@ -100,6 +100,18 @@ Residual risks:
 - current proof pack can be partial when based on old Sprint 23 temp repo paths; rerun live validation after OpenRouter credits/API access are restored.
 - final public release still needs legal review for license, trademark, CLA/DCO, and commercial boundary.
 
+## Sprint 35 Release Candidate Note
+
+Date: 2026-06-13
+
+Sprint 35 moves from planning docs into public-release mechanics while staying local-only:
+
+- `tools/release_check.py` provides one local command for Markdown link checks, Python tests, self-scan, package build, dashboard lint, and dashboard build.
+- `.github/ISSUE_TEMPLATE/` now includes bug, false-positive, rule-request, and integration-request forms.
+- `.github/pull_request_template.md` now asks for verification, safety, scanner evidence, and docs checks.
+- `docs/release-candidate-plan.md` defines the no-remote tag plan, launch checklist, demo artifact policy, and known blockers.
+- No generated `.agent-permit/` run directories or live proof artifacts are committed.
+
 ## Public Release Gate
 
 Do not publish until these are true:
@@ -108,12 +120,12 @@ Do not publish until these are true:
 | --- | --- | --- |
 | License | `LICENSE` exists with chosen OSI-approved license. | added: Apache-2.0 |
 | Security | `SECURITY.md` defines vulnerability reporting and no-secret policy. | added |
-| Contribution | `CONTRIBUTING.md` explains rule fixtures, tests, and scanner safety boundary. | added |
+| Contribution | `CONTRIBUTING.md` explains rule fixtures, tests, scanner safety boundary, issue intake, and PR checks. | added |
 | Conduct | `CODE_OF_CONDUCT.md` exists or project explicitly defers it. | added |
 | Support | `SUPPORT.md` tells users what is community vs paid. | added |
 | README | README has install, quickstart, demo, architecture, limits, and OpenRouter/Phoenix notes. | partial |
 | Demo artifact | HTML report screenshot or committed sanitized sample report is linked. | strategy added; sample missing |
-| Packaging | package metadata is public-ready; release tags are defined. | metadata aligned; tags missing |
+| Packaging | package metadata is public-ready; release tags are defined. | metadata aligned; local tag plan added |
 | CI | GitHub Actions run tests and self-scan with fixture exclusions. | added |
 | Secret hygiene | no `.env.local`, generated private reports, API keys, or live traces are committed. | checked locally; rerun before publish |
 | Legal/commercial | license, trademark, open-core boundary, and company docs reviewed. | missing |
@@ -151,6 +163,7 @@ Keep out of the public core for now:
 Before remote creation:
 
 ```bash
+python3 tools/release_check.py
 git status --short
 find . -maxdepth 3 -name ".env*"
 uv run --all-extras pytest
@@ -182,6 +195,8 @@ CODE_OF_CONDUCT.md
 SUPPORT.md
 CHANGELOG.md
 ROADMAP.md
+.github/ISSUE_TEMPLATE/
+.github/pull_request_template.md
 action.yml
 pyproject.toml
 uv.lock

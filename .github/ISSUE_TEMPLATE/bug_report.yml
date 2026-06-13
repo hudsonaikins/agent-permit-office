@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a reproducible scanner, CLI, dashboard, or artifact bug.
+title: "Bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Do not paste secrets, private code, API keys, provider traces, or customer data.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What failed, and what did you expect instead?
+      placeholder: The scan exits successfully but raw-findings.json is missing...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Use a minimal public repo or fixture when possible.
+      placeholder: |
+        1. Run `uv run agent-permit scan ...`
+        2. Open `.agent-permit/runs/.../risk-report.md`
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and version
+      description: Paste the command and package commit/version. Redact local paths if needed.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: artifacts
+    attributes:
+      label: Sanitized artifacts
+      description: Attach or paste sanitized snippets from summary.md, risk-report.md, permit.yaml, raw-findings.json, or graph-paths.json.
+      placeholder: Do not include real secrets, private repo names, or full generated run directories.
+    validations:
+      required: false
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed secrets, private code, private traces, and customer data from this report.
+          required: true
