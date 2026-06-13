@@ -1,6 +1,6 @@
 # Open Core Business Plan
 
-Date: 2026-06-07
+Date: 2026-06-13
 
 ## Product Thesis
 
@@ -145,6 +145,162 @@ For regulated or larger customers:
 - procurement/security review package
 - support SLA
 - model gateway policy and spend controls
+
+## Hosted Stack Map
+
+The hosted product should start as a managed review workflow around the open-source artifacts. It should not become a separate scanner that hides the evidence model.
+
+| Layer | Choice | Responsibility | Open-core note |
+| --- | --- | --- | --- |
+| Frontend | React + Vite dashboard with shadcn/ui and Phosphor icons | Review queue, run scope, findings spreadsheet, selected evidence, Decision Log, artifact drawer, product workflow | Current local dashboard remains OSS; hosted adds auth, persistence, and collaboration. |
+| Runtime | Bun for dashboard package lifecycle | Local dev, build, test, scripts | Python CLI stays on `uv`; Bun is dashboard-only. |
+| Compute/hosting | Cloudflare Workers | API routes, static dashboard assets, auth gate, webhook ingestion, signed artifact flows | Hosted control plane only; no deploy needed for local OSS use. |
+| Database | Neon Postgres through Cloudflare Hyperdrive | Organizations, repos, scan runs, findings, approvals, suppressions, policies, model usage, eval runs | Store normalized metadata, not raw repo contents. |
+| Auth | Clerk | Users, organizations, sessions, backend request verification | Use org ID as tenant boundary; never trust frontend org IDs without Worker verification. |
+| Blob storage | Cloudflare R2 | Redacted scan bundles, reports, SARIF, dashboard exports, proof packs, evidence archives | Store object keys and hashes in Neon; keep raw secrets out. |
+| Product analytics | PostHog | Activation funnel, first scan, first blocked permit, first approval, dashboard usage, feature flags | Hosted mode only by default; OSS local telemetry must stay opt-in. |
+| LLM observability | Phoenix/OpenTelemetry first, hosted trace store later | Local traces, evidence-tool spans, eval rows, citation failures, model-quality debugging | Keep local Phoenix OSS path. Hosted trace retention is paid only when customers need managed retention. |
+| Model gateway | OpenRouter now, managed gateway later | Model routing, prompt caching, response caching, spend caps, usage artifacts | BYO key in Community/early Team; managed key is paid because it carries cost and governance. |
+
+Hosted request flow:
+
+```text
+CLI scan/live validation
+  -> redacted artifact bundle
+  -> hosted ingest endpoint
+  -> Cloudflare Worker verifies Clerk/GitHub context
+  -> Neon stores run/finding/approval metadata
+  -> R2 stores artifact blobs
+  -> PostHog records product events without security payloads
+  -> dashboard shows team review queue and audit trail
+```
+
+## First Paid Workflows
+
+Start with workflows that teams already pay people to coordinate manually.
+
+### 1. Multi-Repo Permit Queue
+
+Buyer pain:
+
+```text
+Security and platform teams cannot manually inspect every agent/MCP repo before access changes ship.
+```
+
+Paid value:
+
+- org-level repo inventory
+- scheduled scans
+- blocked/needs-review queue
+- saved views by owner, severity, rule, and repo
+- historical status by repo
+- Slack/GitHub notifications
+
+### 2. Approval And Exception Workflow
+
+Buyer pain:
+
+```text
+Agent access exceptions happen in Slack, PR comments, and spreadsheets with weak audit trail.
+```
+
+Paid value:
+
+- request changes
+- approve exception
+- assign owner
+- attach policy condition
+- expiration date
+- approval history
+- audit export
+
+### 3. Evidence Retention And Proof Packs
+
+Buyer pain:
+
+```text
+Customer/security review asks for proof that agent access was assessed, but local artifacts disappear.
+```
+
+Paid value:
+
+- durable proof packs in R2
+- retention policies
+- signed download links
+- report history
+- compliance-friendly export
+- manifest integrity checks
+
+### 4. Managed Model Gateway
+
+Buyer pain:
+
+```text
+Teams want Deep Agent reports, but do not want every repo owner managing model keys, spend caps, or model policy.
+```
+
+Paid value:
+
+- managed provider keys
+- allowed model policy
+- prompt and response caching
+- spend quotas
+- usage dashboards
+- citation-failure monitoring
+- model escalation rules
+
+### 5. Policy Packs And Custom Rules
+
+Buyer pain:
+
+```text
+Generic rules are useful, but regulated teams need policy language mapped to their controls.
+```
+
+Paid value:
+
+- maintained policy packs
+- rule-to-control mapping
+- custom rules with review
+- false-positive triage
+- org-level policy profiles
+- compliance export
+
+## What Not To Monetize Yet
+
+Do not charge for the things that create trust and adoption.
+
+Keep open:
+
+- scanner engine
+- default rules
+- artifact schemas
+- permit engine
+- local dashboard snapshot
+- SARIF
+- baseline/diff
+- repo policy config
+- local Deep Agent path with user's key
+- citation critic
+- local Phoenix tracing/export
+- GitHub Action
+- fixtures and public validation manifests
+
+Avoid early monetization:
+
+- basic local scan limits
+- hiding rule logic
+- locking SARIF behind paid tier
+- charging for local false-positive fixes
+- gating local proof-pack generation
+- forcing hosted telemetry from OSS usage
+- making managed LLM key mandatory
+
+Reason:
+
+```text
+Open source wins trust by making the permit decision inspectable. Paid product should sell managed workflow and governance, not opaque risk scoring.
+```
 
 ## Pricing Shape
 
