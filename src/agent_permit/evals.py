@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import json
 import os
@@ -33,6 +33,7 @@ REAL_REPO_EVAL_REPORT_FILE = "real-repo-eval-report.md"
 LIVE_REPO_VALIDATIONS_DIR = "live-repo-validations"
 LIVE_REPO_VALIDATION_RESULTS_FILE = "live-repo-validation-results.json"
 LIVE_REPO_VALIDATION_REPORT_FILE = "live-repo-validation-report.md"
+LIVE_REPO_VALIDATION_REPOS_DIR = "repos"
 DEFAULT_PHOENIX_DATASET_NAME = "agent-permit-fixture-evals"
 DEFAULT_PHOENIX_BASE_URL = "http://localhost:6006"
 
@@ -420,6 +421,7 @@ def run_live_repo_validation_suite(
         started_at=started_at,
         completed_at=completed_at,
     )
+    validation_run = _preserve_live_repo_artifacts(validation_run)
     _write_live_repo_validation_artifacts(validation_run)
     return validation_run
 
@@ -685,6 +687,75 @@ def _run_live_repo_validation_case(
         error_message=error_message if not live_validation_passed else "",
         duration_seconds=round(time.perf_counter() - start, 4),
     )
+
+
+def _preserve_live_repo_artifacts(
+    validation_run: LiveRepoValidationRun,
+) -> LiveRepoValidationRun:
+    preserved_results = []
+    for result in validation_run.results:
+        if not result.artifact_dir.is_dir():
+            preserved_results.append(result)
+            continue
+
+        repo_dir = (
+            validation_run.output_dir
+            / LIVE_REPO_VALIDATION_REPOS_DIR
+            / _safe_artifact_segment(result.repo_id)
+            / result.run_id
+        )
+        if repo_dir.exists():
+            shutil.rmtree(repo_dir)
+        repo_dir.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(result.artifact_dir, repo_dir)
+
+        preserved_results.append(
+            replace(
+                result,
+                artifact_dir=repo_dir,
+                report_path=_preserved_artifact_path(
+                    result.report_path,
+                    original_dir=result.artifact_dir,
+                    preserved_dir=repo_dir,
+                ),
+                usage_path=_preserved_artifact_path(
+                    result.usage_path,
+                    original_dir=result.artifact_dir,
+                    preserved_dir=repo_dir,
+                ),
+                validation_path=_preserved_artifact_path(
+                    result.validation_path,
+                    original_dir=result.artifact_dir,
+                    preserved_dir=repo_dir,
+                ),
+            )
+        )
+
+    return replace(validation_run, results=tuple(preserved_results))
+
+
+def _preserved_artifact_path(
+    path: Path | None,
+    *,
+    original_dir: Path,
+    preserved_dir: Path,
+) -> Path | None:
+    if path is None:
+        return None
+    try:
+        relative = path.resolve().relative_to(original_dir.resolve())
+    except ValueError:
+        relative = Path(path.name)
+    candidate = preserved_dir / relative
+    return candidate if candidate.is_file() else None
+
+
+def _safe_artifact_segment(value: str) -> str:
+    safe = "".join(
+        character if character.isalnum() or character in {"-", "_", "."} else "-"
+        for character in value
+    ).strip(".")
+    return safe or "repo"
 
 
 def _write_eval_artifacts(eval_run: FixtureEvalRun) -> None:

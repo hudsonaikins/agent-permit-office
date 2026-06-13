@@ -1,7 +1,7 @@
 {
   "artifactPreviews": {
     ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md": {
-      "content": "# PermitGraph Live Repo Validation Report\n\nValidation run: `sprint23-open-source-live`\nStatus: `passed`\nRepos: `5/5`\nManifest: `/Users/hudson/Documents/GitHub/agent-permit-office/docs/evals/open-source-live-repos.json`\nTotal tokens: `218401`\nCached tokens: `140970`\nCache hit ratio: `67.21%`\n\n## Repos\n\n| Repo | Status | Permit | Findings | Paths | Controls | Citations | Expectations | Tokens | Cached |\n| --- | --- | --- | ---: | ---: | ---: | --- | --- | ---: | ---: |\n| open-swe | pass | needs_review | 2 | 2 | 4 | pass | pass | 40461 | 26933 |\n| github-mcp-server | pass | needs_review | 22 | 9 | 31 | pass | pass | 47018 | 29337 |\n| mcp-use | pass | blocked | 84 | 22 | 105 | pass | pass | 67062 | 42582 |\n| lightagent | pass | approved | 0 | 0 | 0 | pass | pass | 36930 | 25496 |\n| open-multi-agent-canvas | pass | approved | 0 | 0 | 0 | pass | pass | 26930 | 16622 |\n\n## Failures\n\nNo failures.\n",
+      "content": "# Agent Permit Office Live Repo Validation Report\n\nValidation run: `sprint23-open-source-live`\nStatus: `passed`\nRepos: `5/5`\nManifest: `/Users/hudson/Documents/GitHub/agent-permit-office/docs/evals/open-source-live-repos.json`\nTotal tokens: `218401`\nCached tokens: `140970`\nCache hit ratio: `67.21%`\n\n## Repos\n\n| Repo | Status | Permit | Findings | Paths | Controls | Citations | Expectations | Tokens | Cached |\n| --- | --- | --- | ---: | ---: | ---: | --- | --- | ---: | ---: |\n| open-swe | pass | needs_review | 2 | 2 | 4 | pass | pass | 40461 | 26933 |\n| github-mcp-server | pass | needs_review | 22 | 9 | 31 | pass | pass | 47018 | 29337 |\n| mcp-use | pass | blocked | 84 | 22 | 105 | pass | pass | 67062 | 42582 |\n| lightagent | pass | approved | 0 | 0 | 0 | pass | pass | 36930 | 25496 |\n| open-multi-agent-canvas | pass | approved | 0 | 0 | 0 | pass | pass | 26930 | 16622 |\n\n## Failures\n\nNo failures.\n",
       "kind": "markdown",
       "label": "live-repo-validation-report.md",
       "path": ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
@@ -17,9 +17,43 @@
       "truncated": false
     }
   },
+  "contractVersion": "permitgraph.dashboard.snapshot.v1",
+  "decisionLog": [
+    {
+      "detail": "108 findings across 5 repositories.",
+      "id": "decision-scanner",
+      "label": "Scanner evidence loaded",
+      "state": "passed"
+    },
+    {
+      "detail": "33 paths and 140 controls evaluated.",
+      "id": "decision-graph",
+      "label": "Capability graph traced",
+      "state": "blocked"
+    },
+    {
+      "detail": "1 blocked, 2 needs review, 2 approved.",
+      "id": "decision-permit",
+      "label": "Permit status assigned",
+      "state": "blocked"
+    },
+    {
+      "detail": "Citation coverage is 100%.",
+      "id": "decision-deep-agent",
+      "label": "Deep Agent citations checked",
+      "state": "passed"
+    },
+    {
+      "detail": "140970 cached tokens from 218401 total tokens.",
+      "id": "decision-cost",
+      "label": "Cost controls measured",
+      "state": "passed"
+    }
+  ],
   "findings": [
     {
       "age": "Jun 7",
+      "artifactStatus": "partial",
       "artifacts": [
         ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
         ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
@@ -48,6 +82,12 @@
         "modelCalls": 4,
         "totalTokens": 40461
       },
+      "missingArtifacts": [
+        "raw-findings.json",
+        "graph-paths.json",
+        "permit.yaml",
+        "agent-investigation.md"
+      ],
       "owner": "DevEx",
       "path": ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
       "remediation": "Review workflow secrets and use least-privilege permissions before allowing agent automation.",
@@ -69,6 +109,7 @@
     },
     {
       "age": "Jun 5",
+      "artifactStatus": "partial",
       "artifacts": [
         ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
         ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
@@ -97,6 +138,12 @@
         "modelCalls": 4,
         "totalTokens": 47018
       },
+      "missingArtifacts": [
+        "raw-findings.json",
+        "graph-paths.json",
+        "permit.yaml",
+        "agent-investigation.md"
+      ],
       "owner": "DevEx",
       "path": ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
       "remediation": "Review workflow secrets and use least-privilege permissions before allowing agent automation.",
@@ -118,6 +165,7 @@
     },
     {
       "age": "Jun 5",
+      "artifactStatus": "partial",
       "artifacts": [
         ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
         ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
@@ -146,6 +194,12 @@
         "modelCalls": 4,
         "totalTokens": 67062
       },
+      "missingArtifacts": [
+        "raw-findings.json",
+        "graph-paths.json",
+        "permit.yaml",
+        "agent-investigation.md"
+      ],
       "owner": "AppSec",
       "path": ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
       "remediation": "Split trusted CI from untrusted pull request handling and downgrade token permissions before agent execution.",
@@ -167,6 +221,7 @@
     },
     {
       "age": "Jun 5",
+      "artifactStatus": "partial",
       "artifacts": [
         ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
         ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
@@ -195,6 +250,12 @@
         "modelCalls": 4,
         "totalTokens": 36930
       },
+      "missingArtifacts": [
+        "raw-findings.json",
+        "graph-paths.json",
+        "permit.yaml",
+        "agent-investigation.md"
+      ],
       "owner": "Platform",
       "path": ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
       "remediation": "Keep scanner and Deep Agent citation checks in CI to preserve this approval state.",
@@ -215,6 +276,7 @@
     },
     {
       "age": "Jun 4",
+      "artifactStatus": "partial",
       "artifacts": [
         ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
         ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
@@ -243,6 +305,12 @@
         "modelCalls": 3,
         "totalTokens": 26930
       },
+      "missingArtifacts": [
+        "raw-findings.json",
+        "graph-paths.json",
+        "permit.yaml",
+        "agent-investigation.md"
+      ],
       "owner": "Platform",
       "path": ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
       "remediation": "Keep scanner and Deep Agent citation checks in CI to preserve this approval state.",
@@ -262,7 +330,7 @@
       ]
     }
   ],
-  "generatedAt": "2026-06-12T20:15:17.044338+00:00",
+  "generatedAt": "2026-06-13T00:45:56.389991+00:00",
   "policyControls": [
     {
       "id": "CTRL-CITATION",
@@ -289,6 +357,235 @@
       "state": "passed"
     }
   ],
+  "proofPack": {
+    "includedArtifacts": [
+      ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
+      ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json"
+    ],
+    "missingArtifacts": [
+      "agent-investigation.md",
+      "graph-paths.json",
+      "permit.yaml",
+      "raw-findings.json"
+    ],
+    "reason": "Aggregate validation artifacts are repo-local; some per-repo evidence artifacts are missing.",
+    "sourceRunPath": ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
+    "status": "partial"
+  },
+  "repos": [
+    {
+      "commit": {
+        "date": "2026-06-07T05:17:09Z",
+        "hash": "d2268871eb0f90899e3aebd1068baedd8518a656",
+        "message": "feat: surface dashboard UI link on PR reviews [INF-0000] (#1440)"
+      },
+      "counts": {
+        "controls": 4,
+        "findings": 2,
+        "graphPaths": 2
+      },
+      "id": "open-swe",
+      "label": "open-swe",
+      "latestRunId": "sprint23-open-source-live-open-swe",
+      "runIds": [
+        "sprint23-open-source-live-open-swe"
+      ],
+      "source": "https://github.com/langchain-ai/open-swe",
+      "status": "needs-review"
+    },
+    {
+      "commit": {
+        "date": "2026-06-05T15:04:22+01:00",
+        "hash": "457f59932ac041c9276e03e634b0e0c30f19ba3e",
+        "message": "Add confidence parameter to issue mutation MCP tools (#2605)"
+      },
+      "counts": {
+        "controls": 31,
+        "findings": 22,
+        "graphPaths": 9
+      },
+      "id": "github-mcp-server",
+      "label": "github-mcp-server",
+      "latestRunId": "sprint23-open-source-live-github-mcp-server",
+      "runIds": [
+        "sprint23-open-source-live-github-mcp-server"
+      ],
+      "source": "https://github.com/github/github-mcp-server",
+      "status": "needs-review"
+    },
+    {
+      "commit": {
+        "date": "2026-06-05T09:51:24-07:00",
+        "hash": "d7f44dd31a1ecccd03b02d3100b7cef09a6816d7",
+        "message": "chore: update context7 claim (#1666)"
+      },
+      "counts": {
+        "controls": 105,
+        "findings": 84,
+        "graphPaths": 22
+      },
+      "id": "mcp-use",
+      "label": "mcp-use",
+      "latestRunId": "sprint23-open-source-live-mcp-use",
+      "runIds": [
+        "sprint23-open-source-live-mcp-use"
+      ],
+      "source": "https://github.com/mcp-use/mcp-use",
+      "status": "blocked"
+    },
+    {
+      "commit": {
+        "date": "2026-06-05T23:00:09+08:00",
+        "hash": "220e8530180a6eec25c5d23f08308707ead0ae91",
+        "message": "Merge pull request #56 from Oxygen56/fix/tracetools-and-litellm-docs"
+      },
+      "counts": {
+        "controls": 0,
+        "findings": 0,
+        "graphPaths": 0
+      },
+      "id": "lightagent",
+      "label": "lightagent",
+      "latestRunId": "sprint23-open-source-live-lightagent",
+      "runIds": [
+        "sprint23-open-source-live-lightagent"
+      ],
+      "source": "https://github.com/wanxingai/LightAgent",
+      "status": "approved"
+    },
+    {
+      "commit": {
+        "date": "2026-06-04T21:59:57-05:00",
+        "hash": "25f20b22e7afe3277b6c350c14ef4d54f7147e49",
+        "message": "fix: point Copilot Cloud links at the Intelligence dashboard"
+      },
+      "counts": {
+        "controls": 0,
+        "findings": 0,
+        "graphPaths": 0
+      },
+      "id": "open-multi-agent-canvas",
+      "label": "open-multi-agent-canvas",
+      "latestRunId": "sprint23-open-source-live-open-multi-agent-canvas",
+      "runIds": [
+        "sprint23-open-source-live-open-multi-agent-canvas"
+      ],
+      "source": "https://github.com/CopilotKit/open-multi-agent-canvas",
+      "status": "approved"
+    }
+  ],
+  "runDetails": {
+    "sprint23-open-source-live": {
+      "artifactAvailability": "aggregate",
+      "artifactPreviewPaths": [
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json"
+      ],
+      "missingArtifacts": [
+        "per-repo raw-findings.json",
+        "per-repo graph-paths.json"
+      ],
+      "repoId": "all",
+      "rowIds": [
+        "APO-LIVE-0001",
+        "APO-LIVE-0002",
+        "APO-LIVE-0003",
+        "APO-LIVE-0004",
+        "APO-LIVE-0005"
+      ],
+      "runId": "sprint23-open-source-live"
+    },
+    "sprint23-open-source-live-github-mcp-server": {
+      "artifactAvailability": "partial",
+      "artifactPreviewPaths": [
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md"
+      ],
+      "missingArtifacts": [
+        "raw-findings.json",
+        "graph-paths.json",
+        "permit.yaml",
+        "agent-investigation.md"
+      ],
+      "repoId": "github-mcp-server",
+      "rowIds": [
+        "APO-LIVE-0002"
+      ],
+      "runId": "sprint23-open-source-live-github-mcp-server"
+    },
+    "sprint23-open-source-live-lightagent": {
+      "artifactAvailability": "partial",
+      "artifactPreviewPaths": [
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md"
+      ],
+      "missingArtifacts": [
+        "raw-findings.json",
+        "graph-paths.json",
+        "permit.yaml",
+        "agent-investigation.md"
+      ],
+      "repoId": "lightagent",
+      "rowIds": [
+        "APO-LIVE-0004"
+      ],
+      "runId": "sprint23-open-source-live-lightagent"
+    },
+    "sprint23-open-source-live-mcp-use": {
+      "artifactAvailability": "partial",
+      "artifactPreviewPaths": [
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md"
+      ],
+      "missingArtifacts": [
+        "raw-findings.json",
+        "graph-paths.json",
+        "permit.yaml",
+        "agent-investigation.md"
+      ],
+      "repoId": "mcp-use",
+      "rowIds": [
+        "APO-LIVE-0003"
+      ],
+      "runId": "sprint23-open-source-live-mcp-use"
+    },
+    "sprint23-open-source-live-open-multi-agent-canvas": {
+      "artifactAvailability": "partial",
+      "artifactPreviewPaths": [
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md"
+      ],
+      "missingArtifacts": [
+        "raw-findings.json",
+        "graph-paths.json",
+        "permit.yaml",
+        "agent-investigation.md"
+      ],
+      "repoId": "open-multi-agent-canvas",
+      "rowIds": [
+        "APO-LIVE-0005"
+      ],
+      "runId": "sprint23-open-source-live-open-multi-agent-canvas"
+    },
+    "sprint23-open-source-live-open-swe": {
+      "artifactAvailability": "partial",
+      "artifactPreviewPaths": [
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md"
+      ],
+      "missingArtifacts": [
+        "raw-findings.json",
+        "graph-paths.json",
+        "permit.yaml",
+        "agent-investigation.md"
+      ],
+      "repoId": "open-swe",
+      "rowIds": [
+        "APO-LIVE-0001"
+      ],
+      "runId": "sprint23-open-source-live-open-swe"
+    }
+  },
   "runMeta": {
     "branch": "recent commits",
     "completedAt": "2026-06-07T04:30:32.144335+00:00",
@@ -296,6 +593,160 @@
     "runId": "sprint23-open-source-live",
     "title": "Agent Risk Review"
   },
+  "runs": [
+    {
+      "artifacts": [
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md"
+      ],
+      "completedAt": "2026-06-07T04:30:32.144335+00:00",
+      "id": "sprint23-open-source-live",
+      "label": "Open-source validation suite",
+      "metrics": {
+        "cacheHitRatio": 0.6721,
+        "cachedTokens": 140970,
+        "citationCoverage": 1.0,
+        "controls": 140,
+        "findings": 108,
+        "graphPaths": 33,
+        "modelCalls": 19,
+        "totalTokens": 218401
+      },
+      "repoId": "all",
+      "scope": "validation",
+      "status": "blocked"
+    },
+    {
+      "artifactStatus": "partial",
+      "artifacts": [
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
+        "https://github.com/langchain-ai/open-swe"
+      ],
+      "completedAt": "2026-06-07T05:17:09Z",
+      "id": "sprint23-open-source-live-open-swe",
+      "label": "open-swe",
+      "metrics": {
+        "cacheHitRatio": 0.6958,
+        "cachedTokens": 26933,
+        "citationCheckPassed": true,
+        "controls": 4,
+        "durationSeconds": 35.5493,
+        "expectationCheckPassed": true,
+        "findings": 2,
+        "graphPaths": 2,
+        "modelCalls": 4,
+        "totalTokens": 40461
+      },
+      "repoId": "open-swe",
+      "scope": "repo",
+      "status": "needs-review"
+    },
+    {
+      "artifactStatus": "partial",
+      "artifacts": [
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
+        "https://github.com/github/github-mcp-server"
+      ],
+      "completedAt": "2026-06-05T15:04:22+01:00",
+      "id": "sprint23-open-source-live-github-mcp-server",
+      "label": "github-mcp-server",
+      "metrics": {
+        "cacheHitRatio": 0.6565,
+        "cachedTokens": 29337,
+        "citationCheckPassed": true,
+        "controls": 31,
+        "durationSeconds": 45.9355,
+        "expectationCheckPassed": true,
+        "findings": 22,
+        "graphPaths": 9,
+        "modelCalls": 4,
+        "totalTokens": 47018
+      },
+      "repoId": "github-mcp-server",
+      "scope": "repo",
+      "status": "needs-review"
+    },
+    {
+      "artifactStatus": "partial",
+      "artifacts": [
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
+        "https://github.com/mcp-use/mcp-use"
+      ],
+      "completedAt": "2026-06-05T09:51:24-07:00",
+      "id": "sprint23-open-source-live-mcp-use",
+      "label": "mcp-use",
+      "metrics": {
+        "cacheHitRatio": 0.6591,
+        "cachedTokens": 42582,
+        "citationCheckPassed": true,
+        "controls": 105,
+        "durationSeconds": 51.0393,
+        "expectationCheckPassed": true,
+        "findings": 84,
+        "graphPaths": 22,
+        "modelCalls": 4,
+        "totalTokens": 67062
+      },
+      "repoId": "mcp-use",
+      "scope": "repo",
+      "status": "blocked"
+    },
+    {
+      "artifactStatus": "partial",
+      "artifacts": [
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
+        "https://github.com/wanxingai/LightAgent"
+      ],
+      "completedAt": "2026-06-05T23:00:09+08:00",
+      "id": "sprint23-open-source-live-lightagent",
+      "label": "lightagent",
+      "metrics": {
+        "cacheHitRatio": 0.7119,
+        "cachedTokens": 25496,
+        "citationCheckPassed": true,
+        "controls": 0,
+        "durationSeconds": 24.8137,
+        "expectationCheckPassed": true,
+        "findings": 0,
+        "graphPaths": 0,
+        "modelCalls": 4,
+        "totalTokens": 36930
+      },
+      "repoId": "lightagent",
+      "scope": "repo",
+      "status": "approved"
+    },
+    {
+      "artifactStatus": "partial",
+      "artifacts": [
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-results.json",
+        ".agent-permit/live-repo-validations/sprint23-open-source-live/live-repo-validation-report.md",
+        "https://github.com/CopilotKit/open-multi-agent-canvas"
+      ],
+      "completedAt": "2026-06-04T21:59:57-05:00",
+      "id": "sprint23-open-source-live-open-multi-agent-canvas",
+      "label": "open-multi-agent-canvas",
+      "metrics": {
+        "cacheHitRatio": 0.6405,
+        "cachedTokens": 16622,
+        "citationCheckPassed": true,
+        "controls": 0,
+        "durationSeconds": 21.3177,
+        "expectationCheckPassed": true,
+        "findings": 0,
+        "graphPaths": 0,
+        "modelCalls": 3,
+        "totalTokens": 26930
+      },
+      "repoId": "open-multi-agent-canvas",
+      "scope": "repo",
+      "status": "approved"
+    }
+  ],
   "savedViews": [
     {
       "count": 5,
@@ -318,6 +769,7 @@
       "label": "Approved"
     }
   ],
+  "selectedRunId": "sprint23-open-source-live",
   "source": {
     "demoPath": ".agent-permit/open-source-demos/action-open-source-demo-smoke/open-source-demo-results.json",
     "demoRunId": "action-open-source-demo-smoke",

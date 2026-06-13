@@ -51,16 +51,23 @@ import { cn } from "@/lib/utils"
 import {
   agentTraceSteps,
   artifactPreviews,
+  repos,
   policyControls,
   queueFindings,
   queueSummary,
   runMeta,
+  runDetails,
+  runs,
   savedViews,
+  selectedRunId as defaultSelectedRunId,
   type AgentTraceStep,
   type ArtifactPreview,
   type PermitStatus,
   type QueueSummary,
   type QueueFinding,
+  type RepoSnapshot,
+  type RunDetail,
+  type RunSnapshot,
   type Severity,
   type TraceState,
 } from "@/data/permitQueue"
@@ -109,6 +116,19 @@ function formatBytes(bytes: number) {
   return `${Math.round(bytes / 1024)} KB`
 }
 
+function artifactAvailabilityLabel(availability: RunDetail["artifactAvailability"]) {
+  switch (availability) {
+    case "available":
+      return "Artifacts ready"
+    case "partial":
+      return "Partial artifacts"
+    case "missing":
+      return "Artifacts missing"
+    case "aggregate":
+      return "Aggregate evidence"
+  }
+}
+
 function artifactLabel(artifact: string) {
   if (artifact.startsWith("http")) {
     return "External source"
@@ -116,11 +136,78 @@ function artifactLabel(artifact: string) {
   return artifact.split("/").at(-1) ?? artifact
 }
 
+function repoById(repoId: string) {
+  return repos.find((repo) => repo.id === repoId)
+}
+
+function runById(runId: string) {
+  return runs.find((run) => run.id === runId)
+}
+
+function runOptionsForRepo(repo: RepoSnapshot | null) {
+  if (!repo) {
+    return runs.filter((run) => run.repoId === "all")
+  }
+  return repo.runIds.map((runId) => runById(runId)).filter((run) => run !== undefined)
+}
+
+function rowsForRun(detail: RunDetail | undefined) {
+  if (!detail) {
+    return queueFindings
+  }
+
+  const rowIds = new Set(detail.rowIds)
+  return queueFindings.filter((row) => rowIds.has(row.id))
+}
+
+function summaryForRun(run: RunSnapshot | undefined) {
+  if (!run || run.scope === "validation") {
+    return queueSummary
+  }
+
+  const metrics = run.metrics
+  const hasRepoMetrics = "citationCheckPassed" in metrics
+  const citationCoverage = hasRepoMetrics
+    ? metrics.citationCheckPassed
+      ? 1
+      : 0
+    : "citationCoverage" in metrics
+      ? metrics.citationCoverage
+      : queueSummary.citationCoverage
+  const evalPassRate = hasRepoMetrics
+    ? metrics.expectationCheckPassed
+      ? 1
+      : 0
+    : queueSummary.evalPassRate
+
+  return {
+    ...queueSummary,
+    approvedRepos: run.status === "approved" ? 1 : 0,
+    blockedRepos: run.status === "blocked" ? 1 : 0,
+    cacheHitRatio: metrics.cacheHitRatio,
+    cachedTokens: metrics.cachedTokens,
+    citationCoverage,
+    controls: metrics.controls,
+    evalPassRate,
+    findings: metrics.findings,
+    graphPaths: metrics.graphPaths,
+    inputTokens: Math.max(metrics.totalTokens - metrics.cachedTokens, 0),
+    latestScanFilesIndexed: null,
+    latestScanFindings: metrics.findings,
+    latestScanStatus: run.status,
+    modelCalls: metrics.modelCalls,
+    needsReviewRepos: run.status === "needs-review" ? 1 : 0,
+    passedRepos: run.status === "approved" ? 1 : 0,
+    repos: 1,
+    totalTokens: metrics.totalTokens,
+  } satisfies QueueSummary
+}
+
 function verdictCopy(summary: QueueSummary) {
   if (summary.blockedRepos > 0) {
     return {
       action: "Fix blocked CI trust paths first",
-      body: `${summary.blockedRepos} repo is blocked. ${summary.findings} findings and ${summary.graphPaths} graph paths need review before this validation set should pass unattended.`,
+      body: `${summary.blockedRepos} repo is blocked. ${summary.findings} findings and ${summary.graphPaths} graph paths need review before this scope should pass unattended.`,
       label: "Run verdict",
       status: "Blocked",
       tone: "blocked",
@@ -129,7 +216,7 @@ function verdictCopy(summary: QueueSummary) {
   if (summary.needsReviewRepos > 0) {
     return {
       action: "Review permit exceptions",
-      body: `${summary.needsReviewRepos} repos need human review. Citation checks passed, but owner approval is still required.`,
+      body: `${summary.needsReviewRepos} repo${summary.needsReviewRepos === 1 ? "" : "s"} need human review. Citation checks passed, but owner approval is still required.`,
       label: "Run verdict",
       status: "Needs review",
       tone: "review",
@@ -262,27 +349,47 @@ function decisionLogEntries(finding: QueueFinding): DecisionLogEntry[] {
       : finding.status === "blocked"
         ? "Permit blocked"
         : "Needs review"
+  const nextAction =
+    finding.status === "approved"
+      ? "Keep permit evidence attached"
+      : finding.status === "blocked"
+        ? "Request code or policy change"
+        : "Route to owner for approval"
 
   return [
     {
-      action: `Flagged ${finding.rule}`,
+      action: `Matched ${finding.rule}`,
       actor: "Scanner",
-      detail: finding.evidence,
+      detail: `${severityLabels[finding.severity]} severity. ${finding.evidence}`,
       ref: evidenceLocation(finding),
+      tone: finding.status,
+    },
+    {
+      action: "Mapped graph risk",
+      actor: "Capability graph",
+      detail: `${finding.capability}. ${finding.metrics.graphPaths} paths and ${finding.metrics.controls} controls evaluated.`,
+      ref: `${finding.metrics.graphPaths} paths`,
+      tone: finding.status,
+    },
+    {
+      action: permitAction,
+      actor: "Permit",
+      detail: `${finding.confidence}% confidence from deterministic signals and policy checks.`,
+      ref: statusLabels[finding.status],
       tone: finding.status,
     },
     {
       action: "Verified evidence",
       actor: "Deep Agent",
-      detail: `${finding.metrics.graphPaths} graph paths, ${finding.metrics.controls} controls, ${finding.confidence}% confidence.`,
+      detail: `${finding.metrics.citationCheckPassed ? "Citation passed" : "Citation needs review"}. ${finding.metrics.modelCalls} model calls, ${formatCompact(finding.metrics.cachedTokens)} cached tokens.`,
       ref: finding.artifacts[0] ? artifactLabel(finding.artifacts[0]) : finding.scanner,
       tone: "agent",
     },
     {
-      action: permitAction,
-      actor: "System",
+      action: nextAction,
+      actor: "Next action",
       detail: finding.remediation,
-      ref: statusLabels[finding.status],
+      ref: finding.owner,
       tone: finding.status,
     },
   ]
@@ -368,8 +475,8 @@ function AppSidebar({ summary }: { summary: QueueSummary }) {
         </div>
       </div>
 
-      <div className="apo-sidebar-panel" aria-label="Current run decision">
-        <div className="apo-sidebar-kicker">Current run</div>
+      <div className="apo-sidebar-panel" aria-label="Current scope decision">
+        <div className="apo-sidebar-kicker">Current scope</div>
         <div className="apo-sidebar-decision">
           <span className={cn("apo-sidebar-decision-icon", `is-${verdict.tone}`)}>
             {verdict.tone === "blocked" ? (
@@ -538,6 +645,105 @@ function FilterBar({
           </SelectGroup>
         </SelectContent>
       </Select>
+    </section>
+  )
+}
+
+function RunScopeSelector({
+  selectedRun,
+  onRunChange,
+}: {
+  selectedRun: RunSnapshot
+  onRunChange: (runId: string) => void
+}) {
+  const detail = runDetails[selectedRun.id]
+  const selectedRepoId = detail?.repoId ?? selectedRun.repoId
+  const selectedRepo = selectedRepoId === "all" ? null : (repoById(selectedRepoId) ?? null)
+  const availableRuns = runOptionsForRepo(selectedRepo)
+  const rowCount = detail?.rowIds.length ?? queueFindings.length
+  const artifactAvailability = detail?.artifactAvailability ?? selectedRun.artifactStatus ?? "missing"
+  const missingCount = detail?.missingArtifacts.length ?? 0
+
+  return (
+    <section className="apo-scope-bar" aria-label="Review scope">
+      <div className="apo-scope-copy">
+        <div className="apo-detail-kicker">Review scope</div>
+        <h2>{selectedRepo ? selectedRepo.label : "All repositories"}</h2>
+        <p>
+          {rowCount} validation {rowCount === 1 ? "row" : "rows"} from{" "}
+          {selectedRun.scope === "validation" ? "the full validation run" : selectedRun.label}.
+        </p>
+      </div>
+
+      <div className="apo-scope-controls">
+        <label className="apo-scope-field">
+          <span>Repository</span>
+          <Select
+            onValueChange={(repoId) => {
+              if (repoId === "all") {
+                onRunChange(defaultSelectedRunId)
+                return
+              }
+
+              const repo = repoById(repoId)
+              if (repo) {
+                onRunChange(repo.latestRunId)
+              }
+            }}
+            value={selectedRepoId}
+          >
+            <SelectTrigger
+              aria-label="Repository"
+              className="apo-scope-select"
+              data-testid="repo-scope-select"
+              size="sm"
+            >
+              <SelectValue placeholder="Repository" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="all">All repositories</SelectItem>
+                {repos.map((repo) => (
+                  <SelectItem key={repo.id} value={repo.id}>
+                    {repo.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </label>
+
+        <label className="apo-scope-field">
+          <span>Run</span>
+          <Select onValueChange={onRunChange} value={selectedRun.id}>
+            <SelectTrigger
+              aria-label="Run"
+              className="apo-scope-select"
+              data-testid="run-scope-select"
+              size="sm"
+            >
+              <SelectValue placeholder="Run" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {availableRuns.map((run) => (
+                  <SelectItem key={run.id} value={run.id}>
+                    {run.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </label>
+      </div>
+
+      <div className="apo-scope-state">
+        <StatusBadge status={selectedRun.status} />
+        <Badge className={cn("apo-artifact-state", `is-${artifactAvailability}`)} variant="outline">
+          {artifactAvailabilityLabel(artifactAvailability)}
+          {missingCount > 0 ? ` (${missingCount})` : ""}
+        </Badge>
+      </div>
     </section>
   )
 }
@@ -731,6 +937,11 @@ function DetailRail({
           <StatusBadge status={finding.status} />
         </div>
         <p>{finding.summary}</p>
+        <div className="apo-selected-meta">
+          <span>{finding.rule}</span>
+          <span>{severityLabels[finding.severity]}</span>
+          <span>{finding.owner}</span>
+        </div>
         <div className="apo-decision-actions">
           <Button variant="outline" size="sm">
             Request changes
@@ -779,6 +990,32 @@ function EvidenceTab({
           Scanner evidence
         </div>
         <p>{finding.evidence}</p>
+        <div className="apo-evidence-fact-grid">
+          <div>
+            <span>Rule</span>
+            <strong>{finding.rule}</strong>
+          </div>
+          <div>
+            <span>Severity</span>
+            <strong>{severityLabels[finding.severity]}</strong>
+          </div>
+          <div>
+            <span>Graph paths</span>
+            <strong>{finding.metrics.graphPaths}</strong>
+          </div>
+          <div>
+            <span>Controls</span>
+            <strong>{finding.metrics.controls}</strong>
+          </div>
+          <div>
+            <span>Confidence</span>
+            <strong>{finding.confidence}%</strong>
+          </div>
+          <div>
+            <span>Artifacts</span>
+            <strong>{artifactAvailabilityLabel(finding.artifactStatus)}</strong>
+          </div>
+        </div>
         <div className="apo-code-line">
           <span>{finding.path}</span>
           <span>{finding.line > 0 ? `line ${finding.line}` : "artifact"}</span>
@@ -792,7 +1029,8 @@ function EvidenceTab({
         </div>
         <div className="apo-path-chain">
           <span>repo file</span>
-          <span>tool context</span>
+          <span>{finding.metrics.graphPaths} graph paths</span>
+          <span>{finding.metrics.controls} controls</span>
           <span>{finding.capability}</span>
         </div>
       </section>
@@ -818,6 +1056,11 @@ function EvidenceTab({
             </button>
           ))}
         </div>
+        {finding.missingArtifacts.length > 0 ? (
+          <div className="apo-missing-artifacts">
+            Missing local proof: {finding.missingArtifacts.join(", ")}
+          </div>
+        ) : null}
       </section>
 
       <section className="apo-detail-section">
@@ -965,15 +1208,21 @@ function ArtifactDrawer({
 export function PermitReviewQueue() {
   const [activeView, setActiveView] = useState(savedViews[0]?.id ?? "all")
   const [selectedId, setSelectedId] = useState(queueFindings[0].id)
+  const [selectedRun, setSelectedRun] = useState(defaultSelectedRunId)
   const [selectedArtifact, setSelectedArtifact] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [severity, setSeverity] = useState("all")
   const [theme, setTheme] = useState<"light" | "dark">("light")
 
+  const selectedRunRecord = runById(selectedRun) ?? runById(defaultSelectedRunId) ?? runs[0]
+  const selectedRunDetail = selectedRunRecord ? runDetails[selectedRunRecord.id] : undefined
+  const scopeRows = useMemo(() => rowsForRun(selectedRunDetail), [selectedRunDetail])
+  const scopedSummary = useMemo(() => summaryForRun(selectedRunRecord), [selectedRunRecord])
+
   const filteredRows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
 
-    return queueFindings.filter((row) => {
+    return scopeRows.filter((row) => {
       const matchesView = activeView === "all" || row.status === activeView
       const matchesSeverity = severity === "all" || row.severity === severity
       const matchesSearch =
@@ -985,14 +1234,27 @@ export function PermitReviewQueue() {
 
       return matchesView && matchesSeverity && matchesSearch
     })
-  }, [activeView, search, severity])
+  }, [activeView, scopeRows, search, severity])
 
   const selectedFinding =
-    filteredRows.find((row) => row.id === selectedId) ?? filteredRows[0] ?? queueFindings[0]
+    filteredRows.find((row) => row.id === selectedId) ??
+    filteredRows[0] ??
+    scopeRows[0] ??
+    queueFindings[0]
+
+  function handleRunChange(runId: string) {
+    const nextDetail = runDetails[runId]
+    setSelectedRun(runId)
+
+    const nextRow = rowsForRun(nextDetail)[0]
+    if (nextRow) {
+      setSelectedId(nextRow.id)
+    }
+  }
 
   return (
     <div className={cn("apo-dashboard", theme === "dark" && "dark")}>
-      <AppSidebar summary={queueSummary} />
+      <AppSidebar summary={scopedSummary} />
       <main className="apo-main">
         <DashboardHeader
           onThemeChange={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
@@ -1000,7 +1262,10 @@ export function PermitReviewQueue() {
         />
         <div className="apo-workspace">
           <section className="apo-dashboard-stack" aria-label="Agent risk review">
-            <RunStatusStrip summary={queueSummary} />
+            {selectedRunRecord ? (
+              <RunScopeSelector selectedRun={selectedRunRecord} onRunChange={handleRunChange} />
+            ) : null}
+            <RunStatusStrip summary={scopedSummary} />
 
             <FindingsTable
               activeView={activeView}

@@ -13,6 +13,20 @@ Refresh the dashboard data snapshot from repo-local `.agent-permit` artifacts:
 python3 ../tools/export_dashboard_snapshot.py
 ```
 
+Write a sanitized customer-demo proof pack:
+
+```bash
+python3 ../tools/export_dashboard_snapshot.py --proof-pack
+```
+
+Proof pack docs: [`../docs/proof-pack-export.md`](../docs/proof-pack-export.md)
+
+Snapshot contract:
+
+- Version: `permitgraph.dashboard.snapshot.v1`
+- Contract doc: [`../docs/permitgraph-dashboard-snapshot-contract.md`](../docs/permitgraph-dashboard-snapshot-contract.md)
+- Data bridge: `src/data/permitQueue.ts`
+
 Current scope:
 
 - Vite React TypeScript app

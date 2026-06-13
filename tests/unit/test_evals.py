@@ -441,6 +441,21 @@ def test_live_repo_validation_suite_runs_manifest_repos(tmp_path, monkeypatch) -
     assert (validation_run.output_dir / LIVE_REPO_VALIDATION_REPORT_FILE).is_file()
     result = validation_run.results[0]
     assert result.run_id == "live-real-agent-repo"
+    preserved_dir = (
+        validation_run.output_dir
+        / "repos"
+        / "agent-repo"
+        / "live-real-agent-repo"
+    )
+    assert result.artifact_dir == preserved_dir
+    assert (preserved_dir / "raw-findings.json").is_file()
+    assert payload["results"][0]["artifact_dir"] == str(preserved_dir)
+    assert payload["results"][0]["report_path"] == str(
+        preserved_dir / "agent-investigation.md"
+    )
+    assert payload["results"][0]["validation_path"] == str(
+        preserved_dir / "live-validation.json"
+    )
     assert result.actual_permit_status == "needs_review"
     assert result.actual_rule_ids == ("ci-secret-reference", "ci-write-permission")
     assert result.citation_check_passed is True
