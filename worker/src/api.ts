@@ -40,6 +40,12 @@ export async function handleRequest(
     if (request.method === "GET" && url.pathname === "/api/snapshot") {
       return json(await buildSnapshot(db));
     }
+    if (request.method === "GET" && url.pathname === "/api/jobs") {
+      return json({ jobs: await listJobs(db, url.searchParams.get("status")) });
+    }
+    if (request.method === "GET" && url.pathname === "/api/job") {
+      return json({ job: await getJob(db, requiredSearchParam(url, "id")) });
+    }
     if (request.method === "POST" && url.pathname === "/api/jobs") {
       return json(await createJob(request, db), { status: 201 });
     }
@@ -69,10 +75,14 @@ async function listRepositories(sql: SqlClient): Promise<SqlRow[]> {
 async function listRuns(sql: SqlClient): Promise<SqlRow[]> {
   return sql(
     `
-    SELECT scan_runs.run_id, scan_runs.permit_status, scan_runs.status,
+    SELECT scan_runs.id, scan_runs.job_id, scan_runs.repository_id,
+           scan_runs.run_id, scan_runs.permit_status, scan_runs.status,
            scan_runs.findings_count, scan_runs.graph_paths_count,
            scan_runs.controls_count, scan_runs.completed_at,
-           repositories.label AS repository_label
+           scan_runs.files_indexed, scan_runs.artifact_dir,
+           repositories.label AS repository_label,
+           repositories.local_path,
+           repositories.branch
     FROM scan_runs
     JOIN repositories ON repositories.id = scan_runs.repository_id
     ORDER BY scan_runs.completed_at DESC NULLS LAST
@@ -86,8 +96,17 @@ async function listFindings(sql: SqlClient): Promise<SqlRow[]> {
     `
     SELECT findings.finding_id, findings.title, findings.rule_id,
            findings.severity, findings.status, findings.path,
-           findings.line_start, repositories.label AS repository_label,
-           scan_runs.run_id
+           findings.line_start, findings.recommendation, findings.risk,
+           repositories.id AS repository_id,
+           repositories.label AS repository_label,
+           repositories.local_path,
+           repositories.branch,
+           scan_runs.run_id,
+           scan_runs.permit_status,
+           scan_runs.findings_count,
+           scan_runs.graph_paths_count,
+           scan_runs.controls_count,
+           scan_runs.artifact_dir
     FROM findings
     JOIN scan_runs ON scan_runs.id = findings.scan_run_id
     JOIN repositories ON repositories.id = scan_runs.repository_id
@@ -97,11 +116,61 @@ async function listFindings(sql: SqlClient): Promise<SqlRow[]> {
   );
 }
 
+async function listJobs(
+  sql: SqlClient,
+  status: string | null = null,
+): Promise<SqlRow[]> {
+  const params: SqlValue[] = [];
+  const statusClause = status ? "WHERE scan_jobs.status = $1" : "";
+  if (status) {
+    params.push(status);
+  }
+  return sql(
+    `
+    SELECT scan_jobs.id, scan_jobs.repository_id, scan_jobs.mode,
+           scan_jobs.status, scan_jobs.requested_at, scan_jobs.claimed_at,
+           scan_jobs.completed_at, scan_jobs.error,
+           repositories.label AS repository_label,
+           repositories.local_path,
+           repositories.branch
+    FROM scan_jobs
+    JOIN repositories ON repositories.id = scan_jobs.repository_id
+    ${statusClause}
+    ORDER BY scan_jobs.requested_at DESC
+    LIMIT 50
+    `,
+    params,
+  );
+}
+
+async function getJob(sql: SqlClient, jobId: string): Promise<SqlRow> {
+  const rows = await sql(
+    `
+    SELECT scan_jobs.id, scan_jobs.repository_id, scan_jobs.mode,
+           scan_jobs.status, scan_jobs.requested_at, scan_jobs.claimed_at,
+           scan_jobs.completed_at, scan_jobs.error,
+           repositories.label AS repository_label,
+           repositories.local_path,
+           repositories.branch
+    FROM scan_jobs
+    JOIN repositories ON repositories.id = scan_jobs.repository_id
+    WHERE scan_jobs.id = $1
+    LIMIT 1
+    `,
+    [jobId],
+  );
+  if (!rows[0]) {
+    throw new ApiError(404, "job_not_found");
+  }
+  return rows[0];
+}
+
 async function buildSnapshot(sql: SqlClient): Promise<JsonObject> {
-  const [repositories, runs, findings, queuedJobs] = await Promise.all([
+  const [repositories, runs, findings, jobs, queuedJobs] = await Promise.all([
     listRepositories(sql),
     listRuns(sql),
     listFindings(sql),
+    listJobs(sql),
     countJobs(sql, "queued"),
   ]);
   return {
@@ -115,6 +184,7 @@ async function buildSnapshot(sql: SqlClient): Promise<JsonObject> {
     repositories,
     runs,
     findings,
+    jobs,
   };
 }
 
@@ -128,11 +198,18 @@ async function countJobs(sql: SqlClient, status: string): Promise<number> {
 
 async function createJob(request: Request, sql: SqlClient): Promise<JsonObject> {
   const payload = await readJson(request);
-  const localPath = requiredString(payload, "localPath");
+  const localPath =
+    optionalString(payload, "localPath") ?? optionalString(payload, "local_path");
+  if (!localPath) {
+    throw new ApiError(400, "localPath is required");
+  }
   if (!localPath.startsWith("/")) {
     throw new ApiError(400, "localPath must be absolute");
   }
-  const label = optionalString(payload, "label") ?? pathLabel(localPath);
+  const label =
+    optionalString(payload, "label") ??
+    optionalString(payload, "repo_label") ??
+    pathLabel(localPath);
   const branch = optionalString(payload, "branch");
   const mode = optionalString(payload, "mode") ?? "scan";
   if (mode !== "scan") {
@@ -216,6 +293,14 @@ async function readJson(request: Request): Promise<JsonObject> {
 function requiredString(payload: JsonObject, key: string): string {
   const value = payload[key];
   if (typeof value !== "string" || value.trim() === "") {
+    throw new ApiError(400, `${key} is required`);
+  }
+  return value;
+}
+
+function requiredSearchParam(url: URL, key: string): string {
+  const value = url.searchParams.get(key);
+  if (!value) {
     throw new ApiError(400, `${key} is required`);
   }
   return value;

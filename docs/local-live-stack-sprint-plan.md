@@ -74,17 +74,18 @@ GET  /api/events?jobId=...&after=...
 
 ```json
 {
-  "repo_label": "agent-permit-office",
-  "local_path": "/absolute/path/to/repo",
+  "label": "agent-permit-office",
+  "localPath": "/absolute/path/to/repo",
   "mode": "scan",
   "branch": "main"
 }
 ```
 
+Snake-case aliases `repo_label` and `local_path` are also accepted.
+
 Allowed `mode` values:
 
 - `scan`
-- `live_validate`
 
 ## Database Tables
 
@@ -185,9 +186,10 @@ uv run --extra db agent-permit db migrate
 bun --cwd worker install
 bun --cwd worker run dev -- --var "DATABASE_URL:$DATABASE_URL"
 
-uv run --extra db --extra deep-agent agent-permit runner --poll-interval 1 --concurrency 1
+uv run --extra db agent-permit runner --once
 
 bun --cwd dashboard install
+cp dashboard/.env.example dashboard/.env
 bun --cwd dashboard run dev
 ```
 
@@ -252,8 +254,8 @@ Goal:
 Current implementation:
 
 - `worker/` contains a Cloudflare Worker API package using Bun, Wrangler, generated Worker runtime types, and `pg` with `nodejs_compat`.
-- Worker endpoints implemented: `GET /api/health`, `GET /api/repos`, `GET /api/runs`, `GET /api/findings`, `GET /api/snapshot`, `POST /api/jobs`, `GET /api/events?jobId=&after=`.
-- `POST /api/jobs` validates absolute local paths and inserts queued jobs using the same stable repository ID contract as the Python runtime.
+- Worker endpoints implemented: `GET /api/health`, `GET /api/repos`, `GET /api/runs`, `GET /api/findings`, `GET /api/snapshot`, `GET /api/jobs`, `GET /api/job?id=`, `POST /api/jobs`, `GET /api/events?jobId=&after=`.
+- `POST /api/jobs` validates absolute local paths and inserts queued jobs using the same stable repository ID contract as the Python runtime. It accepts camel-case and snake-case payload names.
 - `agent-permit runner --once` claims one queued job from Postgres, runs the local scanner, links the run back to the queued job, and marks the job complete or failed.
 - Worker checks pass locally: `bun run check`, `bun test`.
 - Python runner checks pass locally via targeted pytest.
@@ -292,6 +294,14 @@ Stories:
 | S40-03 | Add live run progress | UI shows current phase and elapsed/indexing metrics. | SSE updates current phase, files indexed, high-signal files, final duration. | S39-04 |
 | S40-04 | Refresh findings on completion | New run appears in queue automatically. | `run_completed` triggers snapshot refetch; search/filter/detail still work. | S40-03 |
 | S40-05 | Add local stack docs | Another engineer can run the stack from scratch. | README or docs include Neon, Worker, runner, dashboard commands. | S40-01 |
+
+Current implementation:
+
+- Dashboard reads `VITE_AGENT_PERMIT_API_URL` and fetches `/api/snapshot` on load.
+- If Worker API is unavailable, dashboard renders the bundled generated snapshot and labels the fallback.
+- `Queue scan` posts an absolute local path to `POST /api/jobs`.
+- Dashboard polls snapshots while jobs are queued/running and replays `/api/events` for the latest queued job.
+- Finding rows are derived from live DB findings plus clean-run rows for approved runs with no findings.
 
 Done when:
 

@@ -923,3 +923,11 @@ Sprint 39 implementation progress:
 - Local checks pass: Worker `bun run check`, Worker `bun test`, and targeted Python runner/DB pytest.
 - Local Postgres smoke passes: migration, Worker job creation, runner completion, snapshot read, and SSE event replay.
 - Remote Neon smoke remains blocked until a Neon `DATABASE_URL` is available.
+
+Sprint 40 implementation progress:
+
+- Dashboard now reads `VITE_AGENT_PERMIT_API_URL` and loads `/api/snapshot` before falling back to the generated static snapshot.
+- `Queue scan` now posts absolute local repository paths to `POST /api/jobs`.
+- Dashboard polls snapshots while jobs are open and replays `/api/events` for the latest queued scan.
+- Worker now exposes `GET /api/jobs` and `GET /api/job?id=` for queue status.
+- Local live smoke passed against `tests/fixtures/risky-ci-agent`: Worker queued the job, runner completed it, snapshot returned blocked status with 4 findings, and event replay returned 9 scanner events.

@@ -35,6 +35,9 @@ describe("worker api", () => {
       if (query.includes("FROM findings")) {
         return [{ finding_id: "finding_1", title: "Review CI permissions" }];
       }
+      if (query.includes("FROM scan_jobs") && !query.includes("COUNT")) {
+        return [{ id: "job_1", status: "queued" }];
+      }
       if (query.includes("COUNT")) {
         return [{ count: 2 }];
       }
@@ -49,6 +52,7 @@ describe("worker api", () => {
         findings: number;
         queuedJobs: number;
       };
+      jobs: Array<{ id: string; status: string }>;
     };
 
     expect(response.status).toBe(200);
@@ -58,7 +62,8 @@ describe("worker api", () => {
       findings: 1,
       queuedJobs: 2,
     });
-    expect(calls).toHaveLength(4);
+    expect(payload.jobs).toEqual([{ id: "job_1", status: "queued" }]);
+    expect(calls).toHaveLength(5);
   });
 
   test("job creation validates and inserts queued job", async () => {
@@ -92,6 +97,49 @@ describe("worker api", () => {
     expect(calls).toHaveLength(2);
     expect(calls[0]?.params?.[1]).toBe("demo");
     expect(calls[1]?.params?.[2]).toBe("scan");
+  });
+
+  test("job creation accepts snake case payload", async () => {
+    const sql: SqlClient = async () => [];
+    const response = await handleRequest(
+      request("/api/jobs", {
+        method: "POST",
+        body: JSON.stringify({
+          local_path: "/tmp/demo",
+          repo_label: "demo",
+        }),
+      }),
+      {},
+      sql,
+    );
+    const payload = (await response.json()) as {
+      job: {
+        status: string;
+      };
+    };
+
+    expect(response.status).toBe(201);
+    expect(payload.job.status).toBe("queued");
+  });
+
+  test("jobs endpoint lists queued scans", async () => {
+    const calls: Array<{ query: string; params: unknown[] }> = [];
+    const sql: SqlClient = async (query, params) => {
+      calls.push({ query, params: params ?? [] });
+      return [{ id: "job_1", status: "queued" }];
+    };
+    const response = await handleRequest(
+      request("/api/jobs?status=queued"),
+      {},
+      sql,
+    );
+    const payload = (await response.json()) as {
+      jobs: Array<{ id: string; status: string }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(payload.jobs[0]).toEqual({ id: "job_1", status: "queued" });
+    expect(calls[0]?.params).toEqual(["queued"]);
   });
 
   test("events endpoint emits server-sent events", async () => {
