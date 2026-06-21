@@ -913,3 +913,12 @@ Immediate next step:
 ```text
 Exercise Sprint 38 against a real Neon DATABASE_URL, then begin Sprint 39 Worker API scaffold.
 ```
+
+Sprint 39 implementation progress:
+
+- Created `sprint-39-worker-api-runner` from local Sprint 38 commit.
+- Added `worker/` Cloudflare Worker package with Bun, Wrangler, generated Worker runtime types, and Neon serverless client.
+- Added flat API handlers for health, repos, runs, findings, snapshot, queued jobs, and SSE event replay.
+- Added `agent-permit runner --once` to claim queued jobs and run local scans against the same Postgres queue.
+- Local checks pass: Worker `bun run check`, Worker `bun test`, and targeted Python runner/DB pytest.
+- Real Neon smoke remains blocked until `DATABASE_URL` is available in the local environment.

@@ -2,7 +2,7 @@ from io import StringIO
 
 import agent_permit.cli as cli
 from agent_permit.cli import main
-from agent_permit.db import MIGRATION_SQL, load_ingest_records
+from agent_permit.db import MIGRATION_SQL, load_ingest_records, repository_record_from_path
 
 
 def test_migration_schema_has_expected_tables_without_secret_columns() -> None:
@@ -85,6 +85,39 @@ jobs:
     ]
     assert records.model_usage is not None
     assert records.model_usage.model_calls == 0
+
+
+def test_load_ingest_records_can_attach_existing_job_id(tmp_path, monkeypatch) -> None:
+    stdout = StringIO()
+    stderr = StringIO()
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    (tmp_path / "AGENTS.md").write_text("# Safe agent\n", encoding="utf-8")
+
+    exit_code = main(
+        ["scan", str(tmp_path), "--run-id", "queued-run"],
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+    records = load_ingest_records(
+        tmp_path / ".agent-permit" / "runs" / "queued-run",
+        job_id="job_existing",
+    )
+
+    assert exit_code == 0
+    assert records.job.id == "job_existing"
+    assert records.run.job_id == "job_existing"
+    assert {event.job_id for event in records.events} == {"job_existing"}
+
+
+def test_repository_record_from_path_uses_stable_local_path_id(tmp_path) -> None:
+    first = repository_record_from_path(tmp_path, label="demo", branch="main")
+    second = repository_record_from_path(tmp_path, label="other", branch="dev")
+
+    assert first.id == second.id
+    assert first.label == "demo"
+    assert first.branch == "main"
+    assert first.local_path == str(tmp_path.resolve())
 
 
 def test_db_migrate_requires_database_url(monkeypatch) -> None:

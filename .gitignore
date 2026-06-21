@@ -12,4 +12,6 @@ __pycache__/
 dist/
 htmlcov/
 *.egg-info/
-
+worker/.wrangler/
+worker/dist/
+worker/node_modules/

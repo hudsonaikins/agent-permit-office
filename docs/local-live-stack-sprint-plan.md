@@ -248,6 +248,16 @@ Goal:
 
 - make dashboard-created jobs executable by a local runner and readable through a flat Worker API
 
+Current implementation:
+
+- `worker/` contains a Cloudflare Worker API package using Bun, Wrangler, generated Worker runtime types, and Neon serverless client.
+- Worker endpoints implemented: `GET /api/health`, `GET /api/repos`, `GET /api/runs`, `GET /api/findings`, `GET /api/snapshot`, `POST /api/jobs`, `GET /api/events?jobId=&after=`.
+- `POST /api/jobs` validates absolute local paths and inserts queued jobs using the same stable repository ID contract as the Python runtime.
+- `agent-permit runner --once` claims one queued job from Postgres, runs the local scanner, links the run back to the queued job, and marks the job complete or failed.
+- Worker checks pass locally: `bun run check`, `bun test`.
+- Python runner checks pass locally via targeted pytest.
+- Real end-to-end DB smoke is still gated on a real `DATABASE_URL`.
+
 Stories:
 
 | Planning key | Story | Outcome | Acceptance criteria | Dependencies |

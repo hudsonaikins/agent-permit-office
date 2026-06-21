@@ -1,9 +1,11 @@
+from datetime import datetime, timezone
 from io import StringIO
 import json
 
 import agent_permit.cli as cli
 from agent_permit import __version__
 from agent_permit.cli import build_parser, main
+from agent_permit.db import ClaimedScanJob, RepositoryRecord, ScanJobRecord
 from agent_permit.evidence_context import EvidenceContext
 from agent_permit.investigation import build_investigation_markdown
 
@@ -19,6 +21,67 @@ def test_cli_main_accepts_no_args() -> None:
 def test_cli_parser_has_expected_program_name() -> None:
     parser = build_parser()
     assert parser.prog == "agent-permit"
+
+
+def test_runner_once_reports_idle(monkeypatch) -> None:
+    stdout = StringIO()
+    stderr = StringIO()
+
+    class FakeStore:
+        def claim_next_scan_job(self):
+            return None
+
+    monkeypatch.setattr(cli, "store_from_env", lambda: FakeStore())
+
+    exit_code = main(["runner", "--once"], stdout=stdout, stderr=stderr)
+
+    assert exit_code == 0
+    assert stderr.getvalue() == ""
+    assert "Status: runner_idle" in stdout.getvalue()
+
+
+def test_runner_once_claims_and_completes_job(tmp_path, monkeypatch) -> None:
+    stdout = StringIO()
+    stderr = StringIO()
+    completed = []
+    failed = []
+    (tmp_path / "AGENTS.md").write_text("# Safe agent\n", encoding="utf-8")
+    claimed = ClaimedScanJob(
+        job=ScanJobRecord(
+            id="job_test_runner",
+            repository_id="repo_test",
+            mode="scan",
+            status="running",
+            requested_at=datetime.now(timezone.utc),
+        ),
+        repository=RepositoryRecord(
+            id="repo_test",
+            label="safe-agent",
+            local_path=str(tmp_path),
+        ),
+    )
+
+    class FakeStore:
+        def claim_next_scan_job(self):
+            return claimed
+
+        def complete_scan_job(self, job_id):
+            completed.append(job_id)
+
+        def fail_scan_job(self, job_id, error):
+            failed.append((job_id, error))
+
+    monkeypatch.setattr(cli, "store_from_env", lambda: FakeStore())
+    monkeypatch.setattr(cli, "optional_store_from_env", lambda: None)
+
+    exit_code = main(["runner", "--once"], stdout=stdout, stderr=stderr)
+
+    assert exit_code == 0
+    assert stderr.getvalue() == ""
+    assert completed == ["job_test_runner"]
+    assert failed == []
+    assert "Status: runner_job_complete" in stdout.getvalue()
+    assert (tmp_path / ".agent-permit" / "runs" / "job_test_runner").is_dir()
 
 
 def test_scan_command_creates_run_artifacts(tmp_path) -> None:

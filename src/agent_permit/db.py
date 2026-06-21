@@ -3,10 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from agent_permit.analytics import (
     ANALYTICS_EVENTS_FILE,
@@ -222,6 +224,12 @@ class IngestRecords:
     model_usage: ModelUsageRecord | None
 
 
+@dataclass(frozen=True)
+class ClaimedScanJob:
+    job: ScanJobRecord
+    repository: RepositoryRecord
+
+
 class PostgresStore:
     def __init__(self, database_url: str) -> None:
         self.database_url = database_url
@@ -251,6 +259,105 @@ class PostgresStore:
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 _insert_event(cursor, event)
+
+    def create_scan_job(
+        self,
+        *,
+        repository_label: str,
+        local_path: Path,
+        branch: str | None = None,
+        mode: str = "scan",
+    ) -> str:
+        repository = repository_record_from_path(
+            local_path,
+            label=repository_label,
+            branch=branch,
+        )
+        job_id = f"job_{uuid4()}"
+        job = ScanJobRecord(
+            id=job_id,
+            repository_id=repository.id,
+            mode=mode,
+            status="queued",
+            requested_at=datetime.now(timezone.utc),
+        )
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                _upsert_repository(cursor, repository)
+                _upsert_scan_job(cursor, job)
+        return job_id
+
+    def claim_next_scan_job(self) -> ClaimedScanJob | None:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    WITH next_job AS (
+                      SELECT id
+                      FROM scan_jobs
+                      WHERE status = 'queued'
+                      ORDER BY requested_at ASC
+                      LIMIT 1
+                      FOR UPDATE SKIP LOCKED
+                    )
+                    UPDATE scan_jobs
+                    SET status = 'running',
+                        claimed_at = now(),
+                        error = NULL
+                    WHERE id = (SELECT id FROM next_job)
+                    RETURNING id, repository_id, mode, status, requested_at,
+                              claimed_at, completed_at, error
+                    """
+                )
+                job_row = cursor.fetchone()
+                if job_row is None:
+                    return None
+                job = _scan_job_from_row(job_row)
+                cursor.execute(
+                    """
+                    SELECT id, label, local_path, branch
+                    FROM repositories
+                    WHERE id = %s
+                    """,
+                    (job.repository_id,),
+                )
+                repository_row = cursor.fetchone()
+                if repository_row is None:
+                    raise RuntimeError(
+                        f"queued job has no repository: {job.repository_id}"
+                    )
+                return ClaimedScanJob(
+                    job=job,
+                    repository=_repository_from_row(repository_row),
+                )
+
+    def complete_scan_job(self, job_id: str) -> None:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE scan_jobs
+                    SET status = 'completed',
+                        completed_at = now(),
+                        error = NULL
+                    WHERE id = %s
+                    """,
+                    (job_id,),
+                )
+
+    def fail_scan_job(self, job_id: str, error: str) -> None:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE scan_jobs
+                    SET status = 'failed',
+                        completed_at = now(),
+                        error = %s
+                    WHERE id = %s
+                    """,
+                    (_redacted_error(error), job_id),
+                )
 
     def _connect(self) -> Any:
         try:
@@ -284,6 +391,7 @@ def load_ingest_records(
     local_path: Path | None = None,
     branch: str | None = None,
     mode: str = "scan",
+    job_id: str | None = None,
 ) -> IngestRecords:
     artifact_dir = artifact_dir.resolve()
     context = EvidenceContext.load(artifact_dir)
@@ -299,18 +407,13 @@ def load_ingest_records(
         artifact_dir=artifact_dir,
     )
     label = repository_label or target_path.name
-    repository = RepositoryRecord(
-        id=_stable_id("repo", str(target_path)),
-        label=label,
-        local_path=str(target_path),
-        branch=branch,
-    )
+    repository = repository_record_from_path(target_path, label=label, branch=branch)
 
     run_id = context.scan_run_id
     started_at = _parse_datetime(scan_run_payload.get("started_at"))
     completed_at = _parse_datetime(scan_run_payload.get("completed_at"))
     job = ScanJobRecord(
-        id=_stable_id("job", run_id, str(target_path), mode),
+        id=job_id or _stable_id("job", run_id, str(target_path), mode),
         repository_id=repository.id,
         mode=mode,
         status="completed",
@@ -348,6 +451,21 @@ def load_ingest_records(
         events=_event_records(artifact_dir, run_id=run_id, job_id=job.id),
         artifacts=_artifact_records(artifact_dir, run_id=run_id),
         model_usage=_model_usage_record(run_id, metrics_payload),
+    )
+
+
+def repository_record_from_path(
+    local_path: Path,
+    *,
+    label: str | None = None,
+    branch: str | None = None,
+) -> RepositoryRecord:
+    resolved_path = local_path.absolute()
+    return RepositoryRecord(
+        id=_stable_id("repo", str(resolved_path)),
+        label=label or resolved_path.name,
+        local_path=str(resolved_path),
+        branch=branch,
     )
 
 
@@ -461,7 +579,7 @@ def _resolve_target_path(
     artifact_dir: Path,
 ) -> Path:
     if explicit_path is not None:
-        return explicit_path.resolve()
+        return explicit_path.absolute()
     raw_path = scan_run_payload.get("target_path") or scan_input_payload.get("target_path")
     if raw_path:
         return Path(str(raw_path)).resolve()
@@ -556,6 +674,35 @@ def _string_or_none(value: Any) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def _repository_from_row(row: Sequence[Any]) -> RepositoryRecord:
+    return RepositoryRecord(
+        id=str(row[0]),
+        label=str(row[1]),
+        local_path=str(row[2]),
+        branch=_string_or_none(row[3]),
+    )
+
+
+def _scan_job_from_row(row: Sequence[Any]) -> ScanJobRecord:
+    return ScanJobRecord(
+        id=str(row[0]),
+        repository_id=str(row[1]),
+        mode=str(row[2]),
+        status=str(row[3]),
+        requested_at=_parse_datetime(row[4]) or datetime.now(timezone.utc),
+        claimed_at=_parse_datetime(row[5]),
+        completed_at=_parse_datetime(row[6]),
+        error=_string_or_none(row[7]),
+    )
+
+
+def _redacted_error(error: str) -> str:
+    redacted = redact_secret_values({"error": error})
+    if isinstance(redacted, dict):
+        return str(redacted.get("error") or "")
+    return ""
 
 
 def _execute_json(cursor: Any, sql: str, values: tuple[Any, ...]) -> None:

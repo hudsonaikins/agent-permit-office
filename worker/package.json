@@ -1,0 +1,19 @@
+{
+  "name": "agent-permit-worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "check": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.6",
+    "typescript": "^6.0.2",
+    "wrangler": "^4.54.0"
+  }
+}

@@ -471,6 +471,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--branch",
         help="branch name to store with the repository record",
     )
+    runner_parser = subparsers.add_parser(
+        "runner",
+        help="claim queued scan jobs from DATABASE_URL and run them locally",
+    )
+    runner_parser.add_argument(
+        "--once",
+        action="store_true",
+        help="claim at most one queued job and exit",
+    )
     open_source_demo_parser = subparsers.add_parser(
         "open-source-demo",
         help="prepare recent open-source repos and run the live validation demo",
@@ -730,6 +739,8 @@ def main(
             stdout=stdout,
             stderr=stderr,
         )
+    if args.command == "runner":
+        return run_runner(once=args.once, stdout=stdout, stderr=stderr)
     if args.command == "baseline":
         return run_baseline(
             args.artifact_dir,
@@ -769,6 +780,10 @@ def run_scan(
     baseline_path: Path | None = None,
     ci_new_findings_only: bool = False,
     policy_path: Path | None = None,
+    db_job_id: str | None = None,
+    db_repository_label: str | None = None,
+    db_local_path: Path | None = None,
+    db_branch: str | None = None,
     stdout: TextIO,
     stderr: TextIO,
 ) -> int:
@@ -816,7 +831,13 @@ def run_scan(
         db_store = optional_store_from_env()
         event_sinks = [JsonlEventSink(event_path)]
         if db_store is not None:
-            event_sinks.append(DatabaseEventSink(db_store, scan_run_id=scan_run.id))
+            event_sinks.append(
+                DatabaseEventSink(
+                    db_store,
+                    scan_run_id=scan_run.id,
+                    job_id=db_job_id,
+                )
+            )
         event_publisher = EventPublisher(event_sinks)
 
         def publish_scan_phase(
@@ -999,7 +1020,15 @@ def run_scan(
         )
         event_publisher.publish(event_from_metrics("scan_completed", run_metrics))
         if db_store is not None:
-            db_store.write_ingest_records(load_ingest_records(scan_run.artifact_dir))
+            db_store.write_ingest_records(
+                load_ingest_records(
+                    scan_run.artifact_dir,
+                    repository_label=db_repository_label,
+                    local_path=db_local_path,
+                    branch=db_branch,
+                    job_id=db_job_id,
+                )
+            )
     except (OSError, RuntimeError, ValueError) as exc:
         if event_publisher is not None and scan_run_id is not None:
             try:
@@ -1543,6 +1572,78 @@ def run_ingest(
         f"Model usage: {'stored' if records.model_usage is not None else 'not_available'}",
         file=stdout,
     )
+    return 0
+
+
+def run_runner(
+    *,
+    once: bool,
+    stdout: TextIO,
+    stderr: TextIO,
+) -> int:
+    if not once:
+        print("error: runner currently requires --once", file=stderr)
+        return 2
+    try:
+        store = store_from_env()
+        claimed = store.claim_next_scan_job()
+    except RuntimeError as exc:
+        print(f"error: {exc}", file=stderr)
+        return 2
+    except Exception as exc:
+        print(f"error: failed to claim queued job: {exc}", file=stderr)
+        return 1
+
+    if claimed is None:
+        print("Agent Permit Office", file=stdout)
+        print("Status: runner_idle", file=stdout)
+        print("Queued jobs: 0", file=stdout)
+        return 0
+
+    target_path = Path(claimed.repository.local_path)
+    if not target_path.exists() or not target_path.is_dir():
+        error = f"repository path is not a directory: {target_path}"
+        try:
+            store.fail_scan_job(claimed.job.id, error)
+        except Exception as exc:
+            print(f"error: failed to mark job failed: {exc}", file=stderr)
+            return 1
+        print(f"error: {error}", file=stderr)
+        return 1
+
+    scan_stdout = StringIO()
+    scan_stderr = StringIO()
+    scan_exit = run_scan(
+        target_path,
+        run_id=claimed.job.id,
+        db_job_id=claimed.job.id,
+        db_repository_label=claimed.repository.label,
+        db_local_path=Path(claimed.repository.local_path),
+        db_branch=claimed.repository.branch,
+        stdout=scan_stdout,
+        stderr=scan_stderr,
+    )
+    if scan_exit != 0:
+        error = scan_stderr.getvalue().strip() or f"scan exited {scan_exit}"
+        try:
+            store.fail_scan_job(claimed.job.id, error)
+        except Exception as exc:
+            print(f"error: failed to mark job failed: {exc}", file=stderr)
+            return 1
+        print(error, file=stderr)
+        return scan_exit
+
+    try:
+        store.complete_scan_job(claimed.job.id)
+    except Exception as exc:
+        print(f"error: failed to mark job complete: {exc}", file=stderr)
+        return 1
+
+    print("Agent Permit Office", file=stdout)
+    print("Status: runner_job_complete", file=stdout)
+    print(f"Job ID: {claimed.job.id}", file=stdout)
+    print(f"Repository: {claimed.repository.label}", file=stdout)
+    print(f"Target: {claimed.repository.local_path}", file=stdout)
     return 0
 
 
