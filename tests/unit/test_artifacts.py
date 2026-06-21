@@ -84,6 +84,7 @@ def test_create_run_redacts_secret_values_before_disk_write(tmp_path) -> None:
             },
             "badly_named": "sk-live-secret-2",
             "safe_flag": True,
+            "credential_refs": 2,
             "plain_value": "not redacted because key is not sensitive",
         },
     )
@@ -98,6 +99,7 @@ def test_create_run_redacts_secret_values_before_disk_write(tmp_path) -> None:
     assert scan_input["options"]["env"]["OPENAI_API_KEY"] == "<redacted>"
     assert scan_input["options"]["env"]["nested"][0]["github_token"] == "<redacted>"
     assert scan_input["options"]["badly_named"] == "<redacted>"
+    assert scan_input["options"]["credential_refs"] == 2
     assert scan_input["options"]["plain_value"] == "not redacted because key is not sensitive"
 
 

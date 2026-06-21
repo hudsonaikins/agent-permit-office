@@ -14,11 +14,7 @@ function sqlWithRows(rows: SqlRow[]): SqlClient {
 
 describe("worker api", () => {
   test("health does not require database", async () => {
-    const response = await handleRequest(
-      request("/api/health"),
-      {},
-      sqlWithRows([]),
-    );
+    const response = await handleRequest(request("/api/health"), {});
 
     expect(response.status).toBe(200);
     const payload = (await response.json()) as ApiPayload;

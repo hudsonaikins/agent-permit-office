@@ -183,7 +183,7 @@ uv sync --all-extras --dev
 uv run --extra db agent-permit db migrate
 
 bun --cwd worker install
-bun --cwd worker run dev
+bun --cwd worker run dev -- --var "DATABASE_URL:$DATABASE_URL"
 
 uv run --extra db --extra deep-agent agent-permit runner --poll-interval 1 --concurrency 1
 
@@ -201,7 +201,8 @@ Implementation status:
 
 - implemented on branch `sprint-38-local-live-stack-planning`
 - local Python test suite passes: `uv run pytest` -> 123 passed
-- live Neon connection was not exercised because no `DATABASE_URL` was provided in this run
+- local Postgres smoke passes using `DATABASE_URL=postgresql://hudson@127.0.0.1:5432/agent_permit_local`
+- remote Neon smoke still requires a Neon connection string
 
 Plane parent:
 
@@ -231,7 +232,7 @@ Stories:
 Done when:
 
 - `uv run --extra db agent-permit db migrate` works.
-- `uv run --extra db agent-permit ingest .agent-permit/runs/<run_id>` populates Neon.
+- `uv run --extra db agent-permit ingest .agent-permit/runs/<run_id>` populates Postgres.
 - Existing scan tests still pass without `DATABASE_URL`.
 
 Current implementation:
@@ -250,13 +251,14 @@ Goal:
 
 Current implementation:
 
-- `worker/` contains a Cloudflare Worker API package using Bun, Wrangler, generated Worker runtime types, and Neon serverless client.
+- `worker/` contains a Cloudflare Worker API package using Bun, Wrangler, generated Worker runtime types, and `pg` with `nodejs_compat`.
 - Worker endpoints implemented: `GET /api/health`, `GET /api/repos`, `GET /api/runs`, `GET /api/findings`, `GET /api/snapshot`, `POST /api/jobs`, `GET /api/events?jobId=&after=`.
 - `POST /api/jobs` validates absolute local paths and inserts queued jobs using the same stable repository ID contract as the Python runtime.
 - `agent-permit runner --once` claims one queued job from Postgres, runs the local scanner, links the run back to the queued job, and marks the job complete or failed.
 - Worker checks pass locally: `bun run check`, `bun test`.
 - Python runner checks pass locally via targeted pytest.
-- Real end-to-end DB smoke is still gated on a real `DATABASE_URL`.
+- End-to-end local DB smoke passed through Worker `POST /api/jobs`, `agent-permit runner --once`, Worker `/api/snapshot`, and Worker `/api/events?jobId=&after=`.
+- Remote Neon smoke remains gated on a Neon connection string.
 
 Stories:
 
@@ -367,8 +369,9 @@ Internal:
 External:
 
 - Cloudflare Workers: https://developers.cloudflare.com/workers/
+- Cloudflare Workers Postgres: https://developers.cloudflare.com/workers/tutorials/postgres/
 - Cloudflare Hyperdrive: https://developers.cloudflare.com/hyperdrive/
+- Cloudflare Hyperdrive local development: https://developers.cloudflare.com/hyperdrive/configuration/local-development/
 - Cloudflare Agents HTTP/SSE: https://developers.cloudflare.com/agents/runtime/communication/http-sse/
-- Neon serverless driver: https://neon.com/docs/serverless/serverless-driver
 - Neon with Cloudflare Workers: https://developers.cloudflare.com/workers/databases/third-party-integrations/neon/
 - Server-Sent Events: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events

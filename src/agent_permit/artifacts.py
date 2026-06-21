@@ -60,7 +60,11 @@ def redact_secret_values(value: JsonCompatible) -> JsonCompatible:
         redacted: JsonObject = {}
         for key, nested_value in value.items():
             if _is_sensitive_key(key):
-                redacted[key] = "<redacted>"
+                redacted[key] = (
+                    nested_value
+                    if isinstance(nested_value, int | float | bool | type(None))
+                    else "<redacted>"
+                )
             else:
                 redacted[key] = redact_secret_values(nested_value)
         return redacted

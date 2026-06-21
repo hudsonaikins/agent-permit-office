@@ -17,7 +17,7 @@ const SSE_HEADERS = {
 export async function handleRequest(
   request: Request,
   env: Env,
-  sql: SqlClient = createSqlClient(env),
+  sql?: SqlClient,
 ): Promise<Response> {
   const url = new URL(request.url);
   try {
@@ -27,23 +27,24 @@ export async function handleRequest(
     if (request.method === "GET" && url.pathname === "/api/health") {
       return json({ status: "ok" });
     }
+    const db = sql ?? createSqlClient(env);
     if (request.method === "GET" && url.pathname === "/api/repos") {
-      return json({ repositories: await listRepositories(sql) });
+      return json({ repositories: await listRepositories(db) });
     }
     if (request.method === "GET" && url.pathname === "/api/runs") {
-      return json({ runs: await listRuns(sql) });
+      return json({ runs: await listRuns(db) });
     }
     if (request.method === "GET" && url.pathname === "/api/findings") {
-      return json({ findings: await listFindings(sql) });
+      return json({ findings: await listFindings(db) });
     }
     if (request.method === "GET" && url.pathname === "/api/snapshot") {
-      return json(await buildSnapshot(sql));
+      return json(await buildSnapshot(db));
     }
     if (request.method === "POST" && url.pathname === "/api/jobs") {
-      return json(await createJob(request, sql), { status: 201 });
+      return json(await createJob(request, db), { status: 201 });
     }
     if (request.method === "GET" && url.pathname === "/api/events") {
-      return streamEvents(url, sql);
+      return streamEvents(url, db);
     }
     return json({ error: "not_found" }, { status: 404 });
   } catch (error) {
