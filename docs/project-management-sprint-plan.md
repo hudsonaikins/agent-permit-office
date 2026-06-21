@@ -848,10 +848,68 @@ Backlog:
 | Demo artifact policy | Public artifact boundary is clear. | Docs state no generated `.agent-permit/` commit; scrubbed sample shape and proof-pack limitation are explicit. |
 | Local release tag plan | Release mechanics are ready but gated. | Proposed `v0.1.0` tag and remote-push steps are documented and require explicit approval. |
 
-## Immediate Next Step
+## Sprint 36-37: Proof Pack Viewer Rebuild
 
-Run Sprint 35 local release verification:
+Status: done.
+
+Goal:
+
+- replace the broad dashboard prototype with a focused proof-pack viewer for repository findings, evidence, and Deep Agent review
+
+Delivered:
+
+- dark/light proof-pack viewer
+- DM Sans dashboard typography
+- simplified repository findings table
+- queue scan form stub
+- separate finding evidence page
+- static fallback data contract preserved
+- old custom dashboard CSS removed
+
+Proof:
+
+- `bun run lint` passed
+- `bun run build` passed
+- changes merged to `main` and pushed
+
+## Sprint 38-41: Local Live Stack
+
+Status: Sprint 38 implemented locally; Sprints 39-41 planned.
+
+Canonical plan:
+
+- `docs/local-live-stack-sprint-plan.md`
+
+Goal:
+
+- connect the CLI, Neon, Cloudflare Worker API, and dashboard into a local real-time stack
+
+Sprint sequence:
+
+| Sprint | Theme | Outcome |
+| --- | --- | --- |
+| Sprint 38 | Local Runtime Foundation | Neon schema, DB adapter, event publisher, migration command, artifact ingest. |
+| Sprint 39 | Worker API And Runner Queue | Flat Worker API, queued jobs, local runner daemon, SSE event stream. |
+| Sprint 40 | Dashboard Live Mode | API-backed dashboard, real queue scan, live progress, snapshot refresh. |
+| Sprint 41 | Hardening And Demo Script | E2E fixture loop, redaction audit, empty/error states, demo runbook. |
+
+Plane status:
+
+- Project page created: `Local Live Stack Sprint Plan`
+- Backlog items created and accepted: `APO-104` through `APO-112`
+- Sprint 38 execution starts with `APO-105 Add Neon local runtime schema`
+- `APO-110`, `APO-111`, and `APO-112` are Sprint 39-41 summary items; detailed future sprint sub-stories stay in the canonical plan until those sprints open.
+
+Sprint 38 implementation proof:
+
+- Added optional `db` extra with `psycopg[binary]`.
+- Added Postgres schema, DB adapter, event publisher, `agent-permit db migrate`, and `agent-permit ingest`.
+- Scan now emits ordered phase events from `scan_started` through `scan_completed`, with `scan_failed` on runtime failure after event setup.
+- Existing no-DB scanner path preserved.
+- `uv run pytest` passed: 123 tests.
+
+Immediate next step:
 
 ```text
-python3 tools/release_check.py
+Exercise Sprint 38 against a real Neon DATABASE_URL, then begin Sprint 39 Worker API scaffold.
 ```

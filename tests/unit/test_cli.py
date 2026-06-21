@@ -163,11 +163,19 @@ jobs:
     events = [json.loads(line) for line in events_text.splitlines()]
     assert [event["event_name"] for event in events] == [
         "scan_started",
-        "scan_completed",
+        "inventory_indexed",
+        "mcp_scanned",
+        "credentials_scanned",
+        "prompts_scanned",
+        "ci_scanned",
+        "capability_graph_built",
         "permit_decided",
+        "scan_completed",
     ]
-    assert events[1]["target_hash"] == run_metrics["target_hash"]
-    assert events[2]["permit_status"] == "blocked"
+    assert events[-1]["target_hash"] == run_metrics["target_hash"]
+    assert events[-2]["permit_status"] == "blocked"
+    assert events[1]["payload"]["files_indexed"] == 4
+    assert events[6]["payload"]["graph_paths"] == 3
     assert str(tmp_path) not in events_text
     assert f"Artifacts: {artifact_dir}" in stdout.getvalue()
     assert "Files indexed: 4" in stdout.getvalue()
@@ -196,7 +204,7 @@ jobs:
     assert summary_exit == 0
     assert summary_stderr.getvalue() == ""
     assert "Status: analytics_summary_complete" in summary_stdout.getvalue()
-    assert "Total events: 3" in summary_stdout.getvalue()
+    assert "Total events: 9" in summary_stdout.getvalue()
     assert "- scan_completed: 1" in summary_stdout.getvalue()
 
 
@@ -309,8 +317,14 @@ jobs:
     ]
     assert [event["event_name"] for event in events] == [
         "scan_started",
-        "scan_completed",
+        "inventory_indexed",
+        "mcp_scanned",
+        "credentials_scanned",
+        "prompts_scanned",
+        "ci_scanned",
+        "capability_graph_built",
         "permit_decided",
+        "scan_completed",
         "investigation_completed",
         "citation_check_passed",
         "live_validation_completed",

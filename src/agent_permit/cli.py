@@ -55,6 +55,12 @@ from agent_permit.demo import (
     OPEN_SOURCE_DEMO_RESULTS_FILE,
     run_open_source_demo,
 )
+from agent_permit.db import (
+    load_ingest_records,
+    optional_store_from_env,
+    store_from_env,
+)
+from agent_permit.events import DatabaseEventSink, EventPublisher, JsonlEventSink
 from agent_permit.evidence_context import EvidenceContext
 from agent_permit.evals import (
     DEFAULT_PHOENIX_BASE_URL,
@@ -434,6 +440,37 @@ def build_parser() -> argparse.ArgumentParser:
             "or an analytics-events.jsonl file"
         ),
     )
+    db_parser = subparsers.add_parser(
+        "db",
+        help="manage optional local Postgres runtime state",
+    )
+    db_subparsers = db_parser.add_subparsers(dest="db_command")
+    db_subparsers.add_parser(
+        "migrate",
+        help="apply local runtime schema to DATABASE_URL",
+    )
+    ingest_parser = subparsers.add_parser(
+        "ingest",
+        help="load existing .agent-permit/runs/<run_id> artifacts into Postgres",
+    )
+    ingest_parser.add_argument(
+        "artifact_dir",
+        type=Path,
+        help=".agent-permit/runs/<run_id> artifact directory",
+    )
+    ingest_parser.add_argument(
+        "--repo-label",
+        help="repository label to store; defaults to scanned directory name",
+    )
+    ingest_parser.add_argument(
+        "--local-path",
+        type=Path,
+        help="repository path to store; defaults to scan metadata target path",
+    )
+    ingest_parser.add_argument(
+        "--branch",
+        help="branch name to store with the repository record",
+    )
     open_source_demo_parser = subparsers.add_parser(
         "open-source-demo",
         help="prepare recent open-source repos and run the live validation demo",
@@ -679,6 +716,20 @@ def main(
             return run_analytics_summarize(args.path, stdout=stdout, stderr=stderr)
         parser.print_help(file=stdout)
         return 0
+    if args.command == "db":
+        if args.db_command == "migrate":
+            return run_db_migrate(stdout=stdout, stderr=stderr)
+        parser.print_help(file=stdout)
+        return 0
+    if args.command == "ingest":
+        return run_ingest(
+            args.artifact_dir,
+            repository_label=args.repo_label,
+            local_path=args.local_path,
+            branch=args.branch,
+            stdout=stdout,
+            stderr=stderr,
+        )
     if args.command == "baseline":
         return run_baseline(
             args.artifact_dir,
@@ -744,6 +795,8 @@ def run_scan(
         print(f"error: failed to load policy: {exc}", file=stderr)
         return 2
 
+    event_publisher: EventPublisher | None = None
+    scan_run_id: str | None = None
     try:
         finding_diff = None
         policy_evaluation = None
@@ -758,9 +811,31 @@ def run_scan(
                 "policy_path": str(resolved_policy_path) if resolved_policy_path else None,
             },
         )
+        scan_run_id = scan_run.id
         event_path = analytics_events_path(target_path)
-        append_analytics_event(
-            event_path,
+        db_store = optional_store_from_env()
+        event_sinks = [JsonlEventSink(event_path)]
+        if db_store is not None:
+            event_sinks.append(DatabaseEventSink(db_store, scan_run_id=scan_run.id))
+        event_publisher = EventPublisher(event_sinks)
+
+        def publish_scan_phase(
+            event_name: str,
+            *,
+            status: str = "completed",
+            payload: dict[str, Any] | None = None,
+        ) -> None:
+            event_publisher.publish(
+                build_analytics_event(
+                    event_name,
+                    run_id=scan_run.id,
+                    run_type="scan",
+                    status=status,
+                    payload=payload,
+                )
+            )
+
+        event_publisher.publish(
             build_analytics_event(
                 "scan_started",
                 run_id=scan_run.id,
@@ -772,10 +847,24 @@ def run_scan(
             exclude_patterns=exclude_patterns,
         ).scan(target_path, scan_run_id=scan_run.id)
         artifact_writer.write_file_inventory(scan_run, inventory)
+        publish_scan_phase(
+            "inventory_indexed",
+            payload={
+                "files_indexed": len(inventory.files),
+                "high_signal_files": sum(
+                    1 for entry in inventory.files if entry.high_signal
+                ),
+                "skipped_files": sum(inventory.skipped.values()),
+            },
+        )
         mcp_result = McpConfigScanner().scan(
             target_path,
             scan_run_id=scan_run.id,
             inventory=inventory,
+        )
+        publish_scan_phase(
+            "mcp_scanned",
+            payload={"mcp_servers": len(mcp_result.agent_bom.mcp_servers)},
         )
         credential_refs = CredentialReferenceScanner().scan(
             target_path,
@@ -783,15 +872,27 @@ def run_scan(
             inventory=inventory,
         )
         mcp_result.agent_bom.credential_refs.extend(credential_refs)
+        publish_scan_phase(
+            "credentials_scanned",
+            payload={"credential_refs": len(credential_refs)},
+        )
         prompt_findings = PromptInstructionScanner().scan(
             target_path,
             scan_run_id=scan_run.id,
             inventory=inventory,
         )
+        publish_scan_phase(
+            "prompts_scanned",
+            payload={"findings": len(prompt_findings)},
+        )
         ci_findings = CiWorkflowScanner().scan(
             target_path,
             scan_run_id=scan_run.id,
             inventory=inventory,
+        )
+        publish_scan_phase(
+            "ci_scanned",
+            payload={"findings": len(ci_findings)},
         )
         findings = [*mcp_result.findings, *prompt_findings, *ci_findings]
         if policy is not None and resolved_policy_path is not None:
@@ -815,6 +916,14 @@ def run_scan(
                 graph_path_report,
                 policy=policy,
             )
+        publish_scan_phase(
+            "capability_graph_built",
+            payload={
+                "graph_nodes": len(graph_result.codebase_map.nodes),
+                "graph_edges": len(graph_result.codebase_map.edges),
+                "graph_paths": len(graph_path_report.paths),
+            },
+        )
         permit_evaluation = PermitEngine().evaluate(
             scan_run_id=scan_run.id,
             artifact_dir=scan_run.artifact_dir,
@@ -881,20 +990,31 @@ def run_scan(
             scan_run.artifact_dir / RUN_METRICS_FILE,
             run_metrics,
         )
-        append_analytics_event(
-            event_path,
-            event_from_metrics("scan_completed", run_metrics),
-        )
-        append_analytics_event(
-            event_path,
+        event_publisher.publish(
             event_from_metrics(
                 "permit_decided",
                 run_metrics,
                 payload={"permit_status": run_metrics.permit_status},
             ),
         )
-    except OSError as exc:
-        print(f"error: failed to create scan artifacts: {exc}", file=stderr)
+        event_publisher.publish(event_from_metrics("scan_completed", run_metrics))
+        if db_store is not None:
+            db_store.write_ingest_records(load_ingest_records(scan_run.artifact_dir))
+    except (OSError, RuntimeError, ValueError) as exc:
+        if event_publisher is not None and scan_run_id is not None:
+            try:
+                event_publisher.publish(
+                    build_analytics_event(
+                        "scan_failed",
+                        run_id=scan_run_id,
+                        run_type="scan",
+                        status="failed",
+                        payload={"error_type": type(exc).__name__},
+                    )
+                )
+            except (OSError, RuntimeError, ValueError):
+                pass
+        print(f"error: failed to create scan state: {exc}", file=stderr)
         return 1
 
     print("Agent Permit Office", file=stdout)
@@ -1360,6 +1480,69 @@ def run_analytics_summarize(
     if latest_event:
         print(f"Latest event: {latest_event['event_name']}", file=stdout)
         print(f"Latest run: {latest_event.get('run_id') or 'none'}", file=stdout)
+    return 0
+
+
+def run_db_migrate(
+    *,
+    stdout: TextIO,
+    stderr: TextIO,
+) -> int:
+    try:
+        store = store_from_env()
+        store.migrate()
+    except RuntimeError as exc:
+        print(f"error: {exc}", file=stderr)
+        return 2
+    except Exception as exc:
+        print(f"error: database migration failed: {exc}", file=stderr)
+        return 1
+
+    print("Agent Permit Office", file=stdout)
+    print("Status: db_migrate_complete", file=stdout)
+    print("Schema: local_live_stack_v1", file=stdout)
+    return 0
+
+
+def run_ingest(
+    artifact_dir: Path,
+    *,
+    repository_label: str | None = None,
+    local_path: Path | None = None,
+    branch: str | None = None,
+    stdout: TextIO,
+    stderr: TextIO,
+) -> int:
+    try:
+        records = load_ingest_records(
+            artifact_dir,
+            repository_label=repository_label,
+            local_path=local_path,
+            branch=branch,
+        )
+        store = store_from_env()
+        store.write_ingest_records(records)
+    except RuntimeError as exc:
+        print(f"error: {exc}", file=stderr)
+        return 2
+    except (FileNotFoundError, PermissionError, ValueError, OSError) as exc:
+        print(f"error: ingest failed: {exc}", file=stderr)
+        return 1
+    except Exception as exc:
+        print(f"error: database ingest failed: {exc}", file=stderr)
+        return 1
+
+    print("Agent Permit Office", file=stdout)
+    print("Status: ingest_complete", file=stdout)
+    print(f"Run ID: {records.run.run_id}", file=stdout)
+    print(f"Repository: {records.repository.label}", file=stdout)
+    print(f"Findings: {len(records.findings)}", file=stdout)
+    print(f"Artifacts: {len(records.artifacts)}", file=stdout)
+    print(f"Events: {len(records.events)}", file=stdout)
+    print(
+        f"Model usage: {'stored' if records.model_usage is not None else 'not_available'}",
+        file=stdout,
+    )
     return 0
 
 

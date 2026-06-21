@@ -18,6 +18,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+db = [
+  "psycopg[binary]>=3.2",
+]
 deep-agent = [
   "deepagents>=0.6.3",
   "langchain-openai>=1.1.0",
