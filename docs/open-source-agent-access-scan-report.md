@@ -304,4 +304,3 @@ The next sprint should turn this report shape into product behavior:
 2. Make the dashboard detail page use the same reviewer-question structure.
 3. Add a local demo command that scans the open-source manifest and exports a customer-ready HTML report.
 4. Add tests that assert approved, needs-review, and blocked repo examples render with clear reviewer language.
-
