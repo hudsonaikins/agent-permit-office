@@ -11,6 +11,7 @@ from typing import Any
 
 from agent_permit.artifacts import ARTIFACT_ROOT
 from agent_permit.evals import (
+    LiveRepoValidationResult,
     LiveRepoValidationRun,
     load_live_repo_validation_cases,
     run_live_repo_validation_suite,
@@ -192,6 +193,31 @@ def build_open_source_demo_report_markdown(demo_run: OpenSourceDemoRun) -> str:
                 )
                 + " |"
             )
+        lines.extend(
+            [
+                "",
+                "## Reviewer Decision Queue",
+                "",
+                "This is the product view: each repo becomes a reviewer decision before agent access is expanded.",
+                "",
+                "| Repo | Permit | Reviewer question | Recommended response |",
+                "| --- | --- | --- | --- |",
+            ]
+        )
+        for result in validation.results:
+            decision = _reviewer_decision(result.actual_permit_status)
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        result.repo_id,
+                        _permit_label(result.actual_permit_status),
+                        _markdown_cell(decision["question"]),
+                        _markdown_cell(decision["response"]),
+                    ]
+                )
+                + " |"
+            )
     lines.extend(
         [
             "",
@@ -220,6 +246,7 @@ def build_open_source_demo_report_html(demo_run: OpenSourceDemoRun) -> str:
         for result in demo_run.repo_results
     )
     validation_rows = ""
+    decision_cards = ""
     if validation is not None:
         validation_rows = "\n".join(
             "<tr>"
@@ -232,6 +259,10 @@ def build_open_source_demo_report_html(demo_run: OpenSourceDemoRun) -> str:
             f"<td>{'pass' if result.citation_check_passed else 'fail'}</td>"
             f"<td>{'pass' if result.expectation_check_passed else 'fail'}</td>"
             "</tr>"
+            for result in validation.results
+        )
+        decision_cards = "\n".join(
+            _reviewer_decision_card(result)
             for result in validation.results
         )
     live_block = (
@@ -248,6 +279,9 @@ def build_open_source_demo_report_html(demo_run: OpenSourceDemoRun) -> str:
           <thead><tr><th>Repo</th><th>Status</th><th>Permit</th><th>Findings</th><th>Paths</th><th>Controls</th><th>Citations</th><th>Expectations</th></tr></thead>
           <tbody>{validation_rows}</tbody>
         </table>
+        <h2>Reviewer Decision Queue</h2>
+        <p>This is the product view: each repo becomes a reviewer decision before agent access is expanded.</p>
+        <div class=\"decisions\">{decision_cards}</div>
         """
     )
     return f"""<!doctype html>
@@ -267,6 +301,11 @@ def build_open_source_demo_report_html(demo_run: OpenSourceDemoRun) -> str:
     .metrics div {{ border: 1px solid #d9deea; padding: 14px; background: #fbfcff; }}
     .metrics strong {{ display: block; font-size: 20px; }}
     .metrics span {{ color: #59647d; font-size: 13px; }}
+    .decisions {{ display: grid; gap: 12px; margin: 16px 0 28px; }}
+    .decision {{ border: 1px solid #d9deea; background: #fbfcff; padding: 16px; }}
+    .decision h3 {{ margin: 0 0 6px; font-size: 16px; }}
+    .decision .permit {{ display: inline-block; margin-bottom: 10px; color: #4b5875; font-size: 13px; }}
+    .decision p {{ margin: 8px 0 0; }}
     code {{ background: #eef1f6; padding: 2px 4px; }}
   </style>
 </head>
@@ -476,6 +515,53 @@ def _create_demo_run_id() -> str:
 
 def _markdown_cell(text: str) -> str:
     return text.replace("|", "\\|").replace("\n", " ").strip()
+
+
+def _permit_label(status: str) -> str:
+    return status.replace("_", " ").strip() or "unknown"
+
+
+def _reviewer_decision(status: str) -> dict[str, str]:
+    normalized = status.strip().lower()
+    if normalized == "approved":
+        return {
+            "question": "Did this scanner find any configured policy reason to stop agent access?",
+            "response": "Approve from this scanner. No configured agent-access risk matched.",
+        }
+    if normalized == "blocked":
+        return {
+            "question": (
+                "Should unattended agent automation stay blocked until risky CI trust "
+                "paths, write permissions, or MCP routes are fixed?"
+            ),
+            "response": (
+                "Block unattended access. Require remediation or an explicit security "
+                "exception before approval."
+            ),
+        }
+    return {
+        "question": (
+            "Can this repo safely run agent or CI automation with the current workflow "
+            "secrets, write permissions, and tool access?"
+        ),
+        "response": (
+            "Review before approving. Confirm the access path is trusted and "
+            "least-privilege."
+        ),
+    }
+
+
+def _reviewer_decision_card(result: LiveRepoValidationResult) -> str:
+    decision = _reviewer_decision(result.actual_permit_status)
+    permit = _permit_label(result.actual_permit_status)
+    return (
+        '<section class="decision">'
+        f"<h3>{escape(result.repo_id)}</h3>"
+        f'<span class="permit">Permit: {escape(permit)}</span>'
+        f"<p><strong>Reviewer question:</strong> {escape(decision['question'])}</p>"
+        f"<p><strong>Recommended response:</strong> {escape(decision['response'])}</p>"
+        "</section>"
+    )
 
 
 def _run_command(args: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:

@@ -167,6 +167,67 @@ def test_open_source_demo_cli_prints_report_paths(tmp_path, monkeypatch) -> None
     assert "HTML:" in stdout.getvalue()
 
 
+def test_open_source_demo_report_explains_reviewer_decision_queue(tmp_path) -> None:
+    manifest_path = _write_demo_manifest(tmp_path)
+    now = datetime.now(timezone.utc)
+    validation_run = LiveRepoValidationRun(
+        validation_run_id="demo-run",
+        output_dir=tmp_path / "live-validation",
+        manifest_path=manifest_path,
+        repo_root=tmp_path / "repos",
+        results=(
+            _validation_result(
+                tmp_path,
+                repo_id="blocked-repo",
+                permit_status="blocked",
+                findings_count=12,
+                graph_paths_count=3,
+                controls_count=15,
+            ),
+            _validation_result(
+                tmp_path,
+                repo_id="clean-repo",
+                permit_status="approved",
+                findings_count=0,
+                graph_paths_count=0,
+                controls_count=0,
+            ),
+        ),
+        started_at=now,
+        completed_at=now,
+    )
+    demo_run = OpenSourceDemoRun(
+        demo_run_id="demo-run",
+        manifest_path=manifest_path,
+        repo_root=tmp_path / "repos",
+        output_dir=tmp_path / "demo-output",
+        repo_results=(
+            RepoPreparationResult(
+                repo_id="blocked-repo",
+                source="local",
+                repo_path=tmp_path / "blocked-repo",
+                status="exists",
+                commit="abc123456789",
+                commit_date="2026-06-07T00:00:00Z",
+                commit_message="demo commit",
+                error_message="",
+            ),
+        ),
+        validation_run=validation_run,
+        started_at=now,
+        completed_at=now,
+    )
+
+    markdown = demo.build_open_source_demo_report_markdown(demo_run)
+    html = demo.build_open_source_demo_report_html(demo_run)
+
+    assert "## Reviewer Decision Queue" in markdown
+    assert "Should unattended agent automation stay blocked" in markdown
+    assert "Approve from this scanner" in markdown
+    assert "<h2>Reviewer Decision Queue</h2>" in html
+    assert "Recommended response" in html
+
+
 def _write_demo_manifest(tmp_path: Path) -> Path:
     manifest_path = tmp_path / "open-source-live-repos.json"
     manifest_path.write_text(
@@ -188,3 +249,48 @@ def _write_demo_manifest(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return manifest_path
+
+
+def _validation_result(
+    tmp_path: Path,
+    *,
+    repo_id: str,
+    permit_status: str,
+    findings_count: int,
+    graph_paths_count: int,
+    controls_count: int,
+) -> LiveRepoValidationResult:
+    return LiveRepoValidationResult(
+        repo_id=repo_id,
+        passed=True,
+        live_validation_passed=True,
+        expectation_check_passed=True,
+        source="local",
+        repo_path=tmp_path / repo_id,
+        run_id=f"demo-run-{repo_id}",
+        expected_permit_status=permit_status,
+        actual_permit_status=permit_status,
+        expected_rule_ids_present=(),
+        expected_rule_ids_absent=(),
+        actual_rule_ids=(),
+        missing_rule_ids=(),
+        forbidden_rule_ids=(),
+        status_check_passed=True,
+        expected_rule_check_passed=True,
+        forbidden_rule_check_passed=True,
+        citation_check_passed=True,
+        findings_count=findings_count,
+        graph_paths_count=graph_paths_count,
+        controls_count=controls_count,
+        model_calls=1,
+        input_tokens=100,
+        total_tokens=120,
+        cached_tokens=50,
+        cache_hit_ratio=0.5,
+        artifact_dir=tmp_path / "artifact" / repo_id,
+        report_path=None,
+        usage_path=None,
+        validation_path=None,
+        error_message="",
+        duration_seconds=1.0,
+    )

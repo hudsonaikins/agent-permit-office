@@ -227,6 +227,7 @@ Demo and release:
 
 - [Demo](docs/demo.md)
 - [Sanitized Demo Artifacts](docs/sanitized-demo-artifacts.md)
+- [Open Source Agent Access Scan Report](docs/open-source-agent-access-scan-report.md)
 - [Open Source Live Validation](docs/open-source-live-validation.md)
 - [Real Repo Validation](docs/real-repo-validation.md)
 - [MVP Hardening](docs/mvp-hardening.md)
